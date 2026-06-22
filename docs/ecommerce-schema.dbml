@@ -1,0 +1,339 @@
+// =====================================================================
+//  shopping-api — E-commerce schema (DBML)
+//  Paste into https://dbdiagram.io  →  view diagram / export PNG·SQL
+//
+//  Aligned with the storefront FE (repo `shopping/`): per-branch inventory,
+//  variant option axes, guest checkout + order tracking, B2B VAT invoice,
+//  multi-list wishlist, delivery/pickup fulfillment.
+//  Payment method codes mirror shopping-cms (Strapi) `payment-method`.
+//  Money: numeric(12,2) VND. PKs: uuid.
+// =====================================================================
+
+// ── Enums ────────────────────────────────────────────────────────────
+Enum customer_type { individual b2b }
+Enum customer_status { active disabled }
+Enum customer_role { customer admin }  // authz: admin = staff/back-office
+Enum product_status { active draft preorder out_of_stock discontinued }
+Enum option_display_type { swatch pill dropdown }
+Enum inventory_status { in_stock preorder out_of_stock }
+Enum cart_status { active converted abandoned }
+Enum fulfillment_type { delivery pickup }
+Enum order_status { pending confirmed processing shipped delivered cancelled }
+Enum payment_status { pending paid failed refunded }
+Enum payment_method_code { bank_transfer momo atm_card cod }
+Enum shipment_status { pending shipped delivered }
+Enum voucher_type { percent fixed shipping }
+Enum review_status { pending published rejected }
+
+// ── Identity / Accounts ──────────────────────────────────────────────
+Table customer {
+  id uuid [pk]
+  email varchar [unique, note: 'null for guest-only contacts']
+  phone varchar
+  password_hash varchar
+  type customer_type [not null, default: 'individual']
+  role customer_role [not null, default: 'customer']
+  first_name varchar
+  last_name varchar
+  status customer_status [not null, default: 'active']
+  default_branch_id uuid [ref: > branch.id, null]
+  created_at timestamptz
+  updated_at timestamptz
+  Note: 'Guest = an order with customer_id NULL + recipient snapshot. B2B = type=b2b (+ b2b_profile).'
+}
+
+Table b2b_profile {
+  id uuid [pk]
+  customer_id uuid [unique, not null, ref: - customer.id]
+  company_name varchar [not null]
+  tax_code varchar [not null]
+  company_address varchar
+  price_tier_id uuid [ref: > price_tier.id, null]
+  credit_limit numeric(14,2) [default: 0]
+  payment_terms varchar [note: 'e.g. NET30']
+}
+
+Table address {
+  id uuid [pk]
+  customer_id uuid [not null, ref: > customer.id]
+  recipient_name varchar [not null]
+  phone varchar [not null]
+  province_code varchar [not null]
+  district_code varchar [not null]
+  ward_code varchar [not null]
+  street varchar [not null]
+  is_default boolean [default: false]
+}
+
+// ── Catalog ──────────────────────────────────────────────────────────
+Table brand {
+  id uuid [pk]
+  slug varchar [unique, not null]
+  name varchar [not null]
+  logo_url varchar
+}
+
+Table category {
+  id uuid [pk]
+  slug varchar [unique, not null]
+  name varchar [not null]
+  parent_id uuid [ref: > category.id, null]
+  sort_order int [default: 0]
+  is_active boolean [default: true]
+}
+
+Table product {
+  id uuid [pk]
+  slug varchar [unique, not null]
+  name varchar [not null]
+  brand_id uuid [ref: > brand.id, null]
+  status product_status [not null, default: 'draft']
+  short_description text
+  description text
+  base_price numeric(12,2) [default: 0]
+  compare_at_price numeric(12,2)
+  currency varchar [default: 'VND']
+  flags jsonb [note: 'isNew|isBestSeller|isFeatured|isOnSale']
+  rating_avg numeric(3,2) [default: 0]
+  rating_count int [default: 0]
+  seo jsonb
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table product_category {
+  product_id uuid [ref: > product.id]
+  category_id uuid [ref: > category.id]
+  indexes { (product_id, category_id) [pk] }
+}
+
+Table product_image {
+  id uuid [pk]
+  product_id uuid [not null, ref: > product.id]
+  url varchar [not null]
+  alt varchar
+  is_primary boolean [default: false, note: 'ảnh đại diện (thumbnail); đúng 1 ảnh/product nên true']
+  sort_order int [default: 0]
+}
+
+Table product_attribute {
+  id uuid [pk]
+  product_id uuid [not null, ref: > product.id]
+  key varchar [not null]
+  label varchar [not null]
+  value jsonb [note: 'string | string[]']
+  group varchar
+}
+
+Table product_option {
+  id uuid [pk]
+  product_id uuid [not null, ref: > product.id]
+  name varchar [not null, note: 'axis: Màu / Quy cách']
+  display_type option_display_type [not null, default: 'pill']
+  sort_order int [default: 0]
+}
+
+Table product_option_value {
+  id uuid [pk]
+  option_id uuid [not null, ref: > product_option.id]
+  value varchar [not null]
+  sort_order int [default: 0]
+}
+
+Table product_variant {
+  id uuid [pk]
+  product_id uuid [not null, ref: > product.id]
+  sku varchar [unique, not null]
+  price numeric(12,2) [not null]
+  compare_at_price numeric(12,2)
+  image_url varchar
+  is_active boolean [default: true]
+}
+
+Table variant_option_value {
+  variant_id uuid [ref: > product_variant.id]
+  option_value_id uuid [ref: > product_option_value.id]
+  indexes { (variant_id, option_value_id) [pk] }
+}
+
+// ── Branch / Inventory / B2B pricing ─────────────────────────────────
+Table branch {
+  id uuid [pk]
+  name varchar [not null]
+  address varchar
+  city varchar
+  province_code varchar
+  phone varchar
+  is_default boolean [default: false]
+  is_active boolean [default: true]
+}
+
+Table inventory {
+  id uuid [pk]
+  branch_id uuid [not null, ref: > branch.id]
+  variant_id uuid [not null, ref: > product_variant.id]
+  quantity int [default: 0]
+  status inventory_status [not null, default: 'in_stock']
+  indexes { (branch_id, variant_id) [unique] }
+}
+
+Table price_tier {
+  id uuid [pk]
+  name varchar [not null]
+}
+
+Table price_list_item {
+  id uuid [pk]
+  price_tier_id uuid [not null, ref: > price_tier.id]
+  variant_id uuid [not null, ref: > product_variant.id]
+  price numeric(12,2) [not null]
+  indexes { (price_tier_id, variant_id) [unique] }
+}
+
+// ── Cart ─────────────────────────────────────────────────────────────
+Table cart {
+  id uuid [pk]
+  customer_id uuid [ref: > customer.id, null, note: 'null = guest']
+  session_id varchar
+  branch_id uuid [ref: > branch.id]
+  status cart_status [not null, default: 'active']
+  currency varchar [default: 'VND']
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table cart_item {
+  id uuid [pk]
+  cart_id uuid [not null, ref: > cart.id]
+  variant_id uuid [not null, ref: > product_variant.id]
+  quantity int [not null]
+  unit_price numeric(12,2) [not null, note: 'snapshot when added']
+}
+
+// ── Orders / Fulfillment / Payment ───────────────────────────────────
+Table "order" {
+  id uuid [pk]
+  code varchar [unique, not null, note: 'DH…  (track-order by code + phone)']
+  customer_id uuid [ref: > customer.id, null, note: 'null = guest']
+  branch_id uuid [not null, ref: > branch.id]
+  fulfillment fulfillment_type [not null]
+  status order_status [not null, default: 'pending']
+  payment_status payment_status [not null, default: 'pending']
+  recipient_name varchar [not null]
+  recipient_phone varchar [not null]
+  recipient_email varchar
+  shipping_address jsonb [note: 'province/district/ward/street snapshot']
+  subtotal numeric(12,2) [not null]
+  shipping_fee numeric(12,2) [default: 0]
+  discount_total numeric(12,2) [default: 0]
+  grand_total numeric(12,2) [not null]
+  currency varchar [default: 'VND']
+  voucher_code varchar
+  invoice jsonb [note: 'B2B VAT: companyName/taxCode/address/email']
+  notes text
+  placed_at timestamptz
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table order_item {
+  id uuid [pk]
+  order_id uuid [not null, ref: > "order".id]
+  variant_id uuid [ref: > product_variant.id]
+  product_name varchar [not null, note: 'snapshot']
+  variant_title varchar [note: 'snapshot']
+  sku varchar
+  unit_price numeric(12,2) [not null]
+  quantity int [not null]
+  line_total numeric(12,2) [not null]
+}
+
+Table shipping_method {
+  id uuid [pk]
+  code varchar [unique, not null, note: 'standard|express|pickup']
+  label varchar [not null]
+  eta varchar
+}
+
+Table shipment {
+  id uuid [pk]
+  order_id uuid [not null, ref: > "order".id]
+  shipping_method_id uuid [ref: > shipping_method.id]
+  carrier varchar
+  tracking_no varchar
+  status shipment_status [not null, default: 'pending']
+  fee numeric(12,2) [default: 0]
+  shipped_at timestamptz
+  delivered_at timestamptz
+}
+
+Table payment {
+  id uuid [pk]
+  order_id uuid [not null, ref: > "order".id]
+  method_code payment_method_code [not null]
+  amount numeric(12,2) [not null]
+  status payment_status [not null, default: 'pending']
+  transaction_ref varchar
+  payload jsonb
+  paid_at timestamptz
+}
+
+// ── Promotions ───────────────────────────────────────────────────────
+Table voucher {
+  id uuid [pk]
+  code varchar [unique, not null]
+  type voucher_type [not null]
+  value numeric(12,2) [not null, note: 'percent 0-100 | fixed VND | shipping VND']
+  min_subtotal numeric(12,2) [default: 0]
+  max_discount numeric(12,2)
+  usage_limit int
+  used_count int [default: 0]
+  per_customer_limit int
+  starts_at timestamptz
+  ends_at timestamptz
+  is_active boolean [default: true]
+}
+
+Table voucher_redemption {
+  id uuid [pk]
+  voucher_id uuid [not null, ref: > voucher.id]
+  order_id uuid [not null, ref: > "order".id]
+  customer_id uuid [ref: > customer.id, null]
+  amount numeric(12,2) [not null]
+  redeemed_at timestamptz
+}
+
+// ── Engagement ───────────────────────────────────────────────────────
+Table wishlist {
+  id uuid [pk]
+  customer_id uuid [not null, ref: > customer.id]
+  name varchar [not null]
+  is_default boolean [default: false]
+}
+
+Table wishlist_item {
+  id uuid [pk]
+  wishlist_id uuid [not null, ref: > wishlist.id]
+  product_id uuid [not null, ref: > product.id]
+  variant_id uuid [ref: > product_variant.id, null]
+}
+
+Table review {
+  id uuid [pk]
+  product_id uuid [not null, ref: > product.id]
+  customer_id uuid [not null, ref: > customer.id]
+  rating int [not null, note: '1-5']
+  title varchar
+  body text
+  status review_status [not null, default: 'pending']
+  created_at timestamptz
+}
+
+Table back_in_stock_subscription {
+  id uuid [pk]
+  variant_id uuid [not null, ref: > product_variant.id]
+  branch_id uuid [ref: > branch.id, null]
+  customer_id uuid [ref: > customer.id, null]
+  contact varchar [not null, note: 'email or phone']
+  notified_at timestamptz
+}

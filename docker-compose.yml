@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shopping-api-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-shopping_api}
+      POSTGRES_USER: ${DB_USERNAME:-shopping}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shopping}
+    # Host port 5433 so it does not clash with shopping-cms-db on 5432.
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - shopping-api-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-shopping} -d ${DB_NAME:-shopping_api}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  shopping-api-data:
