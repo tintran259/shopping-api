@@ -26,7 +26,10 @@ export class Payment extends BaseEntity {
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
   status: PaymentStatus;
 
-  @ApiProperty({ required: false, description: 'Gateway/transaction reference' })
+  @ApiProperty({
+    required: false,
+    description: 'Gateway/transaction reference',
+  })
   @Column({ name: 'transaction_ref', nullable: true })
   transactionRef?: string;
 

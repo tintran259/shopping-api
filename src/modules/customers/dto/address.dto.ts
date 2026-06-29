@@ -16,7 +16,9 @@ export class CreateAddressDto {
   @IsInt()
   provinceCode: number;
 
-  @ApiProperty({ description: 'Ward code (from /locations/provinces/:code/wards)' })
+  @ApiProperty({
+    description: 'Ward code (from /locations/provinces/:code/wards)',
+  })
   @Type(() => Number)
   @IsInt()
   wardCode: number;

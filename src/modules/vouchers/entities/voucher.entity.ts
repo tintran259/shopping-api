@@ -19,11 +19,23 @@ export class Voucher extends BaseEntity {
   value: string;
 
   @ApiProperty({ default: 0 })
-  @Column({ name: 'min_subtotal', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @Column({
+    name: 'min_subtotal',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   minSubtotal: string;
 
   @ApiProperty({ required: false, description: 'Cap for percent vouchers' })
-  @Column({ name: 'max_discount', type: 'numeric', precision: 12, scale: 2, nullable: true })
+  @Column({
+    name: 'max_discount',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   maxDiscount?: string;
 
   @ApiProperty({ required: false })

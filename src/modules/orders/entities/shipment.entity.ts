@@ -30,7 +30,11 @@ export class Shipment extends BaseEntity {
   trackingNo?: string;
 
   @ApiProperty({ enum: ShipmentStatus })
-  @Column({ type: 'enum', enum: ShipmentStatus, default: ShipmentStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: ShipmentStatus,
+    default: ShipmentStatus.PENDING,
+  })
   status: ShipmentStatus;
 
   @ApiProperty({ default: '0.00' })

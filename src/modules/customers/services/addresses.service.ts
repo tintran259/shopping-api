@@ -54,7 +54,10 @@ export class AddressesService {
     const provinceCode = dto.provinceCode ?? address.provinceCode;
     const wardCode = dto.wardCode ?? address.wardCode;
     if (dto.provinceCode != null || dto.wardCode != null) {
-      const { province, ward } = await this.locations.resolve(provinceCode, wardCode);
+      const { province, ward } = await this.locations.resolve(
+        provinceCode,
+        wardCode,
+      );
       address.provinceCode = province.code;
       address.provinceName = province.name;
       address.wardCode = ward.code;

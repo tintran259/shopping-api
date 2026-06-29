@@ -31,7 +31,13 @@ export class ProductVariant extends BaseEntity {
   price: string;
 
   @ApiProperty({ required: false })
-  @Column({ name: 'compare_at_price', type: 'numeric', precision: 12, scale: 2, nullable: true })
+  @Column({
+    name: 'compare_at_price',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   compareAtPrice?: string;
 
   @ApiProperty({ required: false })

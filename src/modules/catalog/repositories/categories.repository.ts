@@ -10,6 +10,16 @@ export class CategoriesRepository {
     private readonly repo: Repository<Category>,
   ) {}
 
+  /** Accent-insensitive name match for search suggestions ("tra" → "Trà"). */
+  searchByName(q: string, limit: number): Promise<Category[]> {
+    return this.repo
+      .createQueryBuilder('c')
+      .where('unaccent(c.name) ILIKE unaccent(:q)', { q: `%${q}%` })
+      .orderBy('c.name', 'ASC')
+      .take(limit)
+      .getMany();
+  }
+
   create(data: Partial<Category>): Category {
     return this.repo.create(data);
   }

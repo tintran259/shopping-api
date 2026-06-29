@@ -34,7 +34,11 @@ export class VouchersService {
   async update(id: string, dto: UpdateVoucherDto): Promise<Voucher> {
     const voucher = await this.vouchers.findById(id);
     if (!voucher) throw new NotFoundException('Voucher not found');
-    Object.assign(voucher, dto, dto.code ? { code: dto.code.toUpperCase() } : {});
+    Object.assign(
+      voucher,
+      dto,
+      dto.code ? { code: dto.code.toUpperCase() } : {},
+    );
     return this.vouchers.save(voucher);
   }
 
@@ -93,7 +97,12 @@ export class VouchersService {
   /** Record a redemption within the order transaction. */
   redeem(
     manager: EntityManager,
-    data: { voucherId: string; orderId: string; customerId?: string; amount: string },
+    data: {
+      voucherId: string;
+      orderId: string;
+      customerId?: string;
+      amount: string;
+    },
   ): Promise<void> {
     return this.vouchers.redeem(manager, data);
   }

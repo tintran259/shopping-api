@@ -15,7 +15,11 @@ export class Cart extends BaseEntity {
   @Column({ name: 'session_id', nullable: true })
   sessionId?: string;
 
-  @ApiProperty({ required: false, format: 'uuid', description: 'selected branch (scopes stock)' })
+  @ApiProperty({
+    required: false,
+    format: 'uuid',
+    description: 'selected branch (scopes stock)',
+  })
   @Column({ name: 'branch_id', type: 'uuid', nullable: true })
   branchId?: string;
 
@@ -27,6 +31,9 @@ export class Cart extends BaseEntity {
   @Column({ default: 'VND' })
   currency: string;
 
-  @OneToMany(() => CartItem, (item) => item.cart, { cascade: true, eager: true })
+  @OneToMany(() => CartItem, (item) => item.cart, {
+    cascade: true,
+    eager: true,
+  })
   items: CartItem[];
 }

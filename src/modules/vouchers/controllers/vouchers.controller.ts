@@ -11,7 +11,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CustomerRole } from '../../../common/enums';
@@ -66,7 +71,10 @@ export class VouchersController {
   @UseGuards(RolesGuard)
   @Roles(CustomerRole.ADMIN)
   @ApiOperation({ summary: '[admin] Update a voucher' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateVoucherDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateVoucherDto,
+  ) {
     return this.vouchers.update(id, dto);
   }
 

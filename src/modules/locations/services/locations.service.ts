@@ -92,7 +92,9 @@ export class LocationsService {
 
     await this.locations.upsertProvinces(provinces);
     await this.locations.upsertWards(wards);
-    this.logger.log(`Synced ${provinces.length} provinces, ${wards.length} wards`);
+    this.logger.log(
+      `Synced ${provinces.length} provinces, ${wards.length} wards`,
+    );
     return { provinces: provinces.length, wards: wards.length };
   }
 

@@ -30,23 +30,25 @@ export class ProductsController {
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'List products (paginated, filterable)' })
+  @ApiOperation({
+    summary: 'List products (paginated, filterable) — storefront shape',
+  })
   findAll(@Query() query: ProductQueryDto) {
-    return this.products.findAll(query);
+    return this.products.list(query);
   }
 
   @Public()
   @Get('slug/:slug')
-  @ApiOperation({ summary: 'Get a product by slug' })
+  @ApiOperation({ summary: 'Get a product by slug — storefront shape' })
   findBySlug(@Param('slug') slug: string) {
-    return this.products.findBySlug(slug);
+    return this.products.detailBySlug(slug);
   }
 
   @Public()
   @Get(':id')
-  @ApiOperation({ summary: 'Get a product by id' })
+  @ApiOperation({ summary: 'Get a product by id — storefront shape' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.products.findOne(id);
+    return this.products.detailById(id);
   }
 
   @Post()
@@ -63,7 +65,10 @@ export class ProductsController {
   @UseGuards(RolesGuard)
   @Roles(CustomerRole.ADMIN)
   @ApiOperation({ summary: '[admin] Update a product' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProductDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.products.update(id, dto);
   }
 

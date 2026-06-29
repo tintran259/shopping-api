@@ -15,6 +15,11 @@ export class CategoriesService {
     return this.categories.findAll();
   }
 
+  /** Categories matching a search term (for search suggestions). */
+  search(q: string, limit = 4): Promise<Category[]> {
+    return this.categories.searchByName(q, limit);
+  }
+
   async findOne(id: string): Promise<Category> {
     const category = await this.categories.findById(id);
     if (!category) throw new NotFoundException('Category not found');

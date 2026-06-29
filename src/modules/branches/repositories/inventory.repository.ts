@@ -1,6 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { InventoryStatus } from '../../../common/enums';
 import { Inventory } from '../entities/inventory.entity';
 
@@ -21,6 +25,12 @@ export class InventoryRepository {
 
   findForVariant(variantId: string): Promise<Inventory[]> {
     return this.repo.find({ where: { variantId } });
+  }
+
+  /** Bulk per-variant stock for a set of variants (catalog list/detail). */
+  findForVariants(variantIds: string[]): Promise<Inventory[]> {
+    if (!variantIds.length) return Promise.resolve([]);
+    return this.repo.find({ where: { variantId: In(variantIds) } });
   }
 
   getRecord(branchId: string, variantId: string): Promise<Inventory | null> {

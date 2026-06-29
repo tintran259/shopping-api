@@ -11,7 +11,10 @@ export class AddCartItemDto {
   @Min(1)
   quantity: number;
 
-  @ApiPropertyOptional({ format: 'uuid', description: 'Selected branch (scopes stock)' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Selected branch (scopes stock)',
+  })
   @IsOptional()
   @IsUUID()
   branchId?: string;

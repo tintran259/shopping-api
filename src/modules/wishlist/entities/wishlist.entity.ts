@@ -17,6 +17,9 @@ export class Wishlist extends BaseEntity {
   @Column({ name: 'is_default', default: false })
   isDefault: boolean;
 
-  @OneToMany(() => WishlistItem, (i) => i.wishlist, { cascade: true, eager: true })
+  @OneToMany(() => WishlistItem, (i) => i.wishlist, {
+    cascade: true,
+    eager: true,
+  })
   items: WishlistItem[];
 }

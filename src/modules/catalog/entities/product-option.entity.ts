@@ -19,7 +19,12 @@ export class ProductOption extends BaseEntity {
   name: string;
 
   @ApiProperty({ enum: OptionDisplayType })
-  @Column({ name: 'display_type', type: 'enum', enum: OptionDisplayType, default: OptionDisplayType.PILL })
+  @Column({
+    name: 'display_type',
+    type: 'enum',
+    enum: OptionDisplayType,
+    default: OptionDisplayType.PILL,
+  })
   displayType: OptionDisplayType;
 
   @ApiProperty({ default: 0 })

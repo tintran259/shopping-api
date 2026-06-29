@@ -51,7 +51,12 @@ export class Order extends BaseEntity {
   status: OrderStatus;
 
   @ApiProperty({ enum: PaymentStatus })
-  @Column({ name: 'payment_status', type: 'enum', enum: PaymentStatus, default: PaymentStatus.PENDING })
+  @Column({
+    name: 'payment_status',
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
   paymentStatus: PaymentStatus;
 
   @ApiProperty()
@@ -75,11 +80,23 @@ export class Order extends BaseEntity {
   subtotal: string;
 
   @ApiProperty({ default: '0.00' })
-  @Column({ name: 'shipping_fee', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @Column({
+    name: 'shipping_fee',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   shippingFee: string;
 
   @ApiProperty({ default: '0.00' })
-  @Column({ name: 'discount_total', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @Column({
+    name: 'discount_total',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   discountTotal: string;
 
   @ApiProperty()
@@ -106,6 +123,9 @@ export class Order extends BaseEntity {
   @Column({ name: 'placed_at', type: 'timestamptz', nullable: true })
   placedAt?: Date;
 
-  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true, eager: true })
+  @OneToMany(() => OrderItem, (item) => item.order, {
+    cascade: true,
+    eager: true,
+  })
   items: OrderItem[];
 }

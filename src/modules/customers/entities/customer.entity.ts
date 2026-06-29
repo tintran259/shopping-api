@@ -25,7 +25,11 @@ export class Customer extends BaseEntity {
   passwordHash?: string;
 
   @ApiProperty({ enum: CustomerType })
-  @Column({ type: 'enum', enum: CustomerType, default: CustomerType.INDIVIDUAL })
+  @Column({
+    type: 'enum',
+    enum: CustomerType,
+    default: CustomerType.INDIVIDUAL,
+  })
   type: CustomerType;
 
   @ApiProperty({ enum: CustomerRole })
@@ -41,7 +45,11 @@ export class Customer extends BaseEntity {
   lastName?: string;
 
   @ApiProperty({ enum: CustomerStatus })
-  @Column({ type: 'enum', enum: CustomerStatus, default: CustomerStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: CustomerStatus,
+    default: CustomerStatus.ACTIVE,
+  })
   status: CustomerStatus;
 
   @ApiProperty({ required: false, format: 'uuid' })

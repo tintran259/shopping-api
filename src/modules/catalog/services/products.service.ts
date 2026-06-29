@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PaginatedResult } from '../../../common/dto/paginated-result';
 import {
   CreateProductDto,
   ProductQueryDto,
@@ -16,17 +15,130 @@ import { ProductVariant } from '../entities/product-variant.entity';
 import { Product } from '../entities/product.entity';
 import { CategoriesRepository } from '../repositories/categories.repository';
 import { ProductsRepository } from '../repositories/products.repository';
+import { InventoryService } from '../../branches/services/inventory.service';
+import {
+  indexInventory,
+  toProduct,
+  toProductSummary,
+  type FacetDto,
+  type FacetOptionDto,
+  type InventoryMap,
+  type ProductDto,
+  type ProductSummaryDto,
+} from '../serializers/catalog.serializer';
+
+export interface ProductListDto {
+  items: ProductSummaryDto[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+  facets: FacetDto[];
+}
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly products: ProductsRepository,
     private readonly categories: CategoriesRepository,
+    private readonly inventory: InventoryService,
   ) {}
 
-  async findAll(query: ProductQueryDto): Promise<PaginatedResult<Product>> {
+  /** Per-variant inventory for a set of products (one query, avoids N+1). */
+  private async inventoryFor(products: Product[]): Promise<InventoryMap> {
+    const variantIds = products.flatMap((p) =>
+      (p.variants ?? []).map((v) => v.id),
+    );
+    return indexInventory(await this.inventory.findForVariants(variantIds));
+  }
+
+  /** Storefront product list — FE-shaped, with branch stock + facets. */
+  async list(query: ProductQueryDto): Promise<ProductListDto> {
+    const [[data, total], facets] = await Promise.all([
+      this.products.search(query),
+      this.buildFacets(query),
+    ]);
+    const inv = await this.inventoryFor(data);
+    return {
+      items: data.map((p) => toProductSummary(p, inv)),
+      pagination: {
+        page: query.page,
+        pageSize: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit) || 0,
+      },
+      facets,
+    };
+  }
+
+  /** Lightweight typeahead: matching product summaries + total (no facets). */
+  async suggest(
+    q: string,
+    limit = 6,
+  ): Promise<{ products: ProductSummaryDto[]; total: number }> {
+    const query = { q, limit, page: 1, skip: 0 } as ProductQueryDto;
     const [data, total] = await this.products.search(query);
-    return new PaginatedResult(data, total, query.page, query.limit);
+    const inv = await this.inventoryFor(data);
+    return { products: data.map((p) => toProductSummary(p, inv)), total };
+  }
+
+  /** Brand + attribute facets (checkbox) over the base set. Price range is handled
+   *  by the FE via min/max, so it's not emitted here (matches the storefront contract). */
+  private async buildFacets(query: ProductQueryDto): Promise<FacetDto[]> {
+    const [brands, attrRows] = await Promise.all([
+      this.products.facetBrands(query),
+      this.products.facetAttributes(query),
+    ]);
+
+    const facets: FacetDto[] = [];
+    if (brands.length) {
+      facets.push({
+        key: 'brand',
+        label: 'Thương hiệu',
+        type: 'checkbox',
+        options: brands.map((b) => ({
+          value: b.value,
+          label: b.label,
+          count: b.count,
+        })),
+      });
+    }
+
+    const byKey = new Map<
+      string,
+      { label: string; options: FacetOptionDto[] }
+    >();
+    for (const r of attrRows) {
+      const entry = byKey.get(r.key) ?? { label: r.label, options: [] };
+      entry.options.push({
+        value: r.value,
+        label: r.value,
+        count: Number(r.count),
+      });
+      byKey.set(r.key, entry);
+    }
+    for (const [key, entry] of byKey) {
+      facets.push({
+        key,
+        label: entry.label,
+        type: 'checkbox',
+        options: entry.options,
+      });
+    }
+    return facets;
+  }
+
+  /** Storefront product detail (FE-shaped). */
+  async detailBySlug(slug: string): Promise<ProductDto> {
+    const product = await this.findBySlug(slug);
+    return toProduct(product, await this.inventoryFor([product]));
+  }
+
+  async detailById(id: string): Promise<ProductDto> {
+    const product = await this.findOne(id);
+    return toProduct(product, await this.inventoryFor([product]));
   }
 
   async findOne(id: string): Promise<Product> {
@@ -83,6 +195,8 @@ export class ProductsService {
     if (dto.categoryIds) {
       product.categories = await this.resolveCategories(dto.categoryIds);
     }
+    // Strip relation inputs; only scalar columns get assigned here.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { categoryIds, images, attributes, options, variants, ...scalars } =
       dto;
     Object.assign(product, scalars);

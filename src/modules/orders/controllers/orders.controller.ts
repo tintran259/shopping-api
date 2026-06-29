@@ -9,7 +9,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   AuthUser,
   CurrentUser,
@@ -87,7 +92,9 @@ export class OrdersController {
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Confirm payment (gateway webhook stand-in)' })
+  @ApiOperation({
+    summary: '[admin] Confirm payment (gateway webhook stand-in)',
+  })
   confirmPayment(@Param('id', ParseUUIDPipe) id: string) {
     return this.orders.confirmPayment(id);
   }

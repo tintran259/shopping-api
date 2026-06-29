@@ -42,7 +42,9 @@ export class LocationsController {
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Import latest administrative data into the DB' })
+  @ApiOperation({
+    summary: '[admin] Import latest administrative data into the DB',
+  })
   sync() {
     return this.locations.syncFromOpenApi();
   }

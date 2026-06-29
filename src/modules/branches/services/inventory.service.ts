@@ -13,6 +13,11 @@ export class InventoryService {
     return this.inventory.findForVariant(variantId);
   }
 
+  /** Bulk variant→inventory rows for catalog list/detail (avoids N+1). */
+  findForVariants(variantIds: string[]): Promise<Inventory[]> {
+    return this.inventory.findForVariants(variantIds);
+  }
+
   getRecord(branchId: string, variantId: string): Promise<Inventory | null> {
     return this.inventory.getRecord(branchId, variantId);
   }
@@ -21,7 +26,10 @@ export class InventoryService {
   async upsert(dto: UpsertInventoryDto): Promise<Inventory> {
     const record =
       (await this.inventory.getRecord(dto.branchId, dto.variantId)) ??
-      this.inventory.create({ branchId: dto.branchId, variantId: dto.variantId });
+      this.inventory.create({
+        branchId: dto.branchId,
+        variantId: dto.variantId,
+      });
     record.quantity = dto.quantity;
     if (dto.status) record.status = dto.status;
     return this.inventory.save(record);

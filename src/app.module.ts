@@ -14,6 +14,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { SearchModule } from './modules/search/search.module';
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 
@@ -38,6 +39,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     LocationsModule,
     CustomersModule,
     CatalogModule,
+    SearchModule,
     BranchesModule,
     CartModule,
     OrdersModule,
@@ -52,4 +54,4 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
-export class AppModule { }
+export class AppModule {}

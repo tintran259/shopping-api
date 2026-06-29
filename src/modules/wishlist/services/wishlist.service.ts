@@ -16,7 +16,11 @@ export class WishlistService {
     const existing = await this.wishlists.findDefault(customerId);
     if (existing) return existing;
     return this.wishlists.saveList(
-      this.wishlists.createList({ customerId, name: 'My wishlist', isDefault: true }),
+      this.wishlists.createList({
+        customerId,
+        name: 'My wishlist',
+        isDefault: true,
+      }),
     );
   }
 
@@ -26,7 +30,10 @@ export class WishlistService {
     );
   }
 
-  async addItem(customerId: string, dto: AddWishlistItemDto): Promise<Wishlist> {
+  async addItem(
+    customerId: string,
+    dto: AddWishlistItemDto,
+  ): Promise<Wishlist> {
     const list = dto.wishlistId
       ? await this.ownList(customerId, dto.wishlistId)
       : await this.getOrCreateDefault(customerId);

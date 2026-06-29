@@ -7,5 +7,7 @@ export class UpsertInventoryDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() variantId: string;
   @ApiProperty({ minimum: 0 }) @IsInt() @Min(0) quantity: number;
   @ApiPropertyOptional({ enum: InventoryStatus })
-  @IsOptional() @IsEnum(InventoryStatus) status?: InventoryStatus;
+  @IsOptional()
+  @IsEnum(InventoryStatus)
+  status?: InventoryStatus;
 }

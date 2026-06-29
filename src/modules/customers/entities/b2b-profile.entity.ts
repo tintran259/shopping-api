@@ -29,7 +29,13 @@ export class B2bProfile extends BaseEntity {
   priceTierId?: string;
 
   @ApiProperty({ default: 0 })
-  @Column({ name: 'credit_limit', type: 'numeric', precision: 14, scale: 2, default: 0 })
+  @Column({
+    name: 'credit_limit',
+    type: 'numeric',
+    precision: 14,
+    scale: 2,
+    default: 0,
+  })
   creditLimit: string;
 
   @ApiProperty({ required: false, description: 'e.g. NET30' })

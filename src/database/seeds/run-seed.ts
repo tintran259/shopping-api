@@ -31,13 +31,39 @@ const round1k = (n: number) => Math.round(n / 1000) * 1000;
 
 // ── FE: MOCK_BRANCHES ────────────────────────────────────────────────
 const BRANCHES = [
-  { name: 'Chi nhánh Quận 1', address: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1', city: 'TP. Hồ Chí Minh', provinceCode: '79', phone: '1900 1234', isDefault: true },
-  { name: 'Chi nhánh Quận 7', address: '456 Nguyễn Thị Thập, Phường Tân Phú, Quận 7', city: 'TP. Hồ Chí Minh', provinceCode: '79', phone: '1900 1235', isDefault: false },
-  { name: 'Chi nhánh Hoàn Kiếm', address: '78 Hàng Bài, Phường Tràng Tiền, Quận Hoàn Kiếm', city: 'Hà Nội', provinceCode: '1', phone: '1900 1236', isDefault: false },
-  { name: 'Chi nhánh Hải Châu', address: '12 Trần Phú, Phường Hải Châu 1, Quận Hải Châu', city: 'Đà Nẵng', provinceCode: '48', phone: '1900 1237', isDefault: false },
+  {
+    name: 'Chi nhánh Quận 1',
+    address: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1',
+    city: 'TP. Hồ Chí Minh',
+    provinceCode: '79',
+    phone: '1900 1234',
+    isDefault: true,
+  },
+  {
+    name: 'Chi nhánh Quận 7',
+    address: '456 Nguyễn Thị Thập, Phường Tân Phú, Quận 7',
+    city: 'TP. Hồ Chí Minh',
+    provinceCode: '79',
+    phone: '1900 1235',
+    isDefault: false,
+  },
+  {
+    name: 'Chi nhánh Hoàn Kiếm',
+    address: '78 Hàng Bài, Phường Tràng Tiền, Quận Hoàn Kiếm',
+    city: 'Hà Nội',
+    provinceCode: '1',
+    phone: '1900 1236',
+    isDefault: false,
+  },
+  {
+    name: 'Chi nhánh Hải Châu',
+    address: '12 Trần Phú, Phường Hải Châu 1, Quận Hải Châu',
+    city: 'Đà Nẵng',
+    provinceCode: '48',
+    phone: '1900 1237',
+    isDefault: false,
+  },
 ];
-/** Stock per branch (index-aligned). Hoàn Kiếm = 0 to exercise per-branch OOS. */
-const STOCK_PLAN = [25, 12, 0, 8];
 
 // ── FE: CATEGORIES ───────────────────────────────────────────────────
 const CATEGORIES = [
@@ -74,25 +100,146 @@ const IMG = {
 
 // ── FE: DALAT_SPECIALTIES ────────────────────────────────────────────
 const DALAT = [
-  { slug: 'khoai-lang-say-deo', name: 'Khoai lang sấy dẻo', img: IMG.khoai, region: 'Đà Lạt', cert: 'OCOP 3★', flavor: 'Ngọt', weights: ['250g', '500g', '1kg'], base: 65_000 },
-  { slug: 'mut-dau-tay-deo', name: 'Mứt dâu tây dẻo', img: IMG.mutDau, region: 'Đà Lạt', cert: 'OCOP 3★', flavor: 'Chua ngọt', weights: ['250g', '500g', 'Hộp quà'], base: 85_000 },
-  { slug: 'hong-treo-gio', name: 'Hồng treo gió', img: IMG.hong, region: 'Đà Lạt', cert: 'OCOP 4★', flavor: 'Ngọt', weights: ['500g', '1kg'], base: 220_000 },
-  { slug: 'dau-tay-say-deo', name: 'Dâu tây sấy dẻo', img: IMG.dauTay, region: 'Đà Lạt', cert: 'VietGAP', flavor: 'Chua ngọt', weights: ['100g', '250g', '500g'], base: 75_000 },
-  { slug: 'hat-mac-ca', name: 'Hạt mắc ca', img: IMG.macca, region: 'Lâm Đồng', cert: 'VietGAP', flavor: 'Bùi', weights: ['250g', '500g', '1kg'], base: 120_000 },
-  { slug: 'ca-phe-cau-dat', name: 'Cà phê Cầu Đất (Arabica)', img: IMG.caphe, region: 'Cầu Đất', cert: 'OCOP 4★', flavor: 'Đắng', weights: ['250g', '500g', '1kg'], base: 110_000 },
-  { slug: 'tra-atiso-tui-loc', name: 'Trà atiso túi lọc', img: IMG.khoai, region: 'Đà Lạt', cert: 'OCOP 3★', flavor: 'Thanh mát', weights: ['Hộp 20 túi', 'Hộp 50 túi'], base: 55_000 },
-  { slug: 'cao-atiso', name: 'Cao atiso nguyên chất', img: IMG.mutDau, region: 'Đà Lạt', cert: 'OCOP 4★', flavor: 'Thanh mát', weights: ['200g', '500g'], base: 140_000 },
-  { slug: 'mut-hong-deo', name: 'Mứt hồng dẻo', img: IMG.hong, region: 'Đà Lạt', cert: 'OCOP 3★', flavor: 'Ngọt', weights: ['250g', '500g'], base: 115_000 },
-  { slug: 'tra-oolong-cau-dat', name: 'Trà oolong Cầu Đất', img: IMG.caphe, region: 'Cầu Đất', cert: 'OCOP 4★', flavor: 'Thanh mát', weights: ['100g', '250g'], base: 130_000 },
-  { slug: 'ruou-vang-da-lat', name: 'Rượu vang Đà Lạt', img: IMG.dauTay, region: 'Đà Lạt', cert: undefined, flavor: 'Chát nhẹ', weights: ['Chai 750ml'], base: 180_000 },
+  {
+    slug: 'khoai-lang-say-deo',
+    name: 'Khoai lang sấy dẻo',
+    img: IMG.khoai,
+    region: 'Đà Lạt',
+    cert: 'OCOP 3★',
+    flavor: 'Ngọt',
+    weights: ['250g', '500g', '1kg'],
+    base: 65_000,
+  },
+  {
+    slug: 'mut-dau-tay-deo',
+    name: 'Mứt dâu tây dẻo',
+    img: IMG.mutDau,
+    region: 'Đà Lạt',
+    cert: 'OCOP 3★',
+    flavor: 'Chua ngọt',
+    weights: ['250g', '500g', 'Hộp quà'],
+    base: 85_000,
+  },
+  {
+    slug: 'hong-treo-gio',
+    name: 'Hồng treo gió',
+    img: IMG.hong,
+    region: 'Đà Lạt',
+    cert: 'OCOP 4★',
+    flavor: 'Ngọt',
+    weights: ['500g', '1kg'],
+    base: 220_000,
+  },
+  {
+    slug: 'dau-tay-say-deo',
+    name: 'Dâu tây sấy dẻo',
+    img: IMG.dauTay,
+    region: 'Đà Lạt',
+    cert: 'VietGAP',
+    flavor: 'Chua ngọt',
+    weights: ['100g', '250g', '500g'],
+    base: 75_000,
+  },
+  {
+    slug: 'hat-mac-ca',
+    name: 'Hạt mắc ca',
+    img: IMG.macca,
+    region: 'Lâm Đồng',
+    cert: 'VietGAP',
+    flavor: 'Bùi',
+    weights: ['250g', '500g', '1kg'],
+    base: 120_000,
+  },
+  {
+    slug: 'ca-phe-cau-dat',
+    name: 'Cà phê Cầu Đất (Arabica)',
+    img: IMG.caphe,
+    region: 'Cầu Đất',
+    cert: 'OCOP 4★',
+    flavor: 'Đắng',
+    weights: ['250g', '500g', '1kg'],
+    base: 110_000,
+  },
+  {
+    slug: 'tra-atiso-tui-loc',
+    name: 'Trà atiso túi lọc',
+    img: IMG.khoai,
+    region: 'Đà Lạt',
+    cert: 'OCOP 3★',
+    flavor: 'Thanh mát',
+    weights: ['Hộp 20 túi', 'Hộp 50 túi'],
+    base: 55_000,
+  },
+  {
+    slug: 'cao-atiso',
+    name: 'Cao atiso nguyên chất',
+    img: IMG.mutDau,
+    region: 'Đà Lạt',
+    cert: 'OCOP 4★',
+    flavor: 'Thanh mát',
+    weights: ['200g', '500g'],
+    base: 140_000,
+  },
+  {
+    slug: 'mut-hong-deo',
+    name: 'Mứt hồng dẻo',
+    img: IMG.hong,
+    region: 'Đà Lạt',
+    cert: 'OCOP 3★',
+    flavor: 'Ngọt',
+    weights: ['250g', '500g'],
+    base: 115_000,
+  },
+  {
+    slug: 'tra-oolong-cau-dat',
+    name: 'Trà oolong Cầu Đất',
+    img: IMG.caphe,
+    region: 'Cầu Đất',
+    cert: 'OCOP 4★',
+    flavor: 'Thanh mát',
+    weights: ['100g', '250g'],
+    base: 130_000,
+  },
+  {
+    slug: 'ruou-vang-da-lat',
+    name: 'Rượu vang Đà Lạt',
+    img: IMG.dauTay,
+    region: 'Đà Lạt',
+    cert: undefined,
+    flavor: 'Chát nhẹ',
+    weights: ['Chai 750ml'],
+    base: 180_000,
+  },
 ];
 
 // ── FE: VOUCHERS ─────────────────────────────────────────────────────
 const VOUCHERS = [
-  { code: 'DACSAN10', type: VoucherType.PERCENT, value: '10', minSubtotal: '200000', maxDiscount: '30000' },
-  { code: 'WELCOME15', type: VoucherType.PERCENT, value: '15', minSubtotal: '100000', maxDiscount: '50000' },
-  { code: 'GIAM50K', type: VoucherType.FIXED, value: '50000', minSubtotal: '300000' },
-  { code: 'FREESHIP', type: VoucherType.SHIPPING, value: '30000', minSubtotal: '150000' },
+  {
+    code: 'DACSAN10',
+    type: VoucherType.PERCENT,
+    value: '10',
+    minSubtotal: '200000',
+    maxDiscount: '30000',
+  },
+  {
+    code: 'WELCOME15',
+    type: VoucherType.PERCENT,
+    value: '15',
+    minSubtotal: '100000',
+    maxDiscount: '50000',
+  },
+  {
+    code: 'GIAM50K',
+    type: VoucherType.FIXED,
+    value: '50000',
+    minSubtotal: '300000',
+  },
+  {
+    code: 'FREESHIP',
+    type: VoucherType.SHIPPING,
+    value: '30000',
+    minSubtotal: '150000',
+  },
 ];
 
 interface SeedVariant {
@@ -111,14 +258,17 @@ interface SeedProduct {
   shortDescription?: string;
   image: string;
   attributes?: { key: string; label: string; value: string }[];
-  options?: { name: string; displayType: OptionDisplayType; values: string[] }[];
+  options?: {
+    name: string;
+    displayType: OptionDisplayType;
+    values: string[];
+  }[];
   variants: SeedVariant[];
 }
 
 async function seedProduct(
   ds: DataSource,
   p: SeedProduct,
-  branches: Branch[],
   brandId: Record<string, string>,
   categoryId: Record<string, string>,
 ) {
@@ -135,7 +285,9 @@ async function seedProduct(
       basePrice: p.basePrice,
       shortDescription: p.shortDescription,
       categories: [category],
-      images: [{ url: p.image, alt: p.name, isPrimary: true, sortOrder: 0 }] as any,
+      images: [
+        { url: p.image, alt: p.name, isPrimary: true, sortOrder: 0 },
+      ] as any,
       attributes: (p.attributes ?? []) as any,
       options: (p.options ?? []).map((o, i) => ({
         name: o.name,
@@ -153,11 +305,12 @@ async function seedProduct(
   });
   const lookup = new Map<string, ProductOptionValueRef>();
   for (const o of full!.options ?? []) {
-    for (const v of o.values ?? []) lookup.set(`${o.name}::${v.value}`, { id: v.id });
+    for (const v of o.values ?? [])
+      lookup.set(`${o.name}::${v.value}`, { id: v.id });
   }
 
   const variantRepo = ds.getRepository(ProductVariant);
-  const variants = await variantRepo.save(
+  await variantRepo.save(
     p.variants.map((v) =>
       variantRepo.create({
         productId: product.id,
@@ -171,20 +324,65 @@ async function seedProduct(
       }),
     ),
   );
+}
 
-  const inventory = ds.getRepository(Inventory);
+/**
+ * Per-branch inventory — each branch carries a DIFFERENT subset of products
+ * (different counts → different listings/images per branch). Re-runnable: rebuilds
+ * the whole inventory table so the distribution always reflects this code.
+ */
+async function seedInventory(
+  ds: DataSource,
+  branches: Branch[],
+): Promise<number> {
+  const inventoryRepo = ds.getRepository(Inventory);
+  const variantRepo = ds.getRepository(ProductVariant);
+  // Rebuild from scratch. `.delete({})` is blocked (empty-criteria guard), so
+  // issue an explicit "DELETE FROM inventory" via the query builder.
+  await inventoryRepo.createQueryBuilder().delete().execute();
+  const variants = await variantRepo.find({ relations: { product: true } });
+
+  const hash = (s: string): number => {
+    let h = 0;
+    for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
+    return Math.abs(h);
+  };
+  // Different subset per branch (different counts → different listings).
+  const carries = (branchIndex: number, h: number): boolean => {
+    switch (branchIndex) {
+      case 0:
+        return true; // flagship — carries everything
+      case 1:
+        return h % 4 !== 0; // ~75%
+      case 2:
+        return h % 2 === 0; // ~50%
+      default:
+        return h % 3 === 0; // ~33%
+    }
+  };
+
+  const rows: Inventory[] = [];
   for (const variant of variants) {
-    await inventory.save(
-      branches.map((b, i) =>
-        inventory.create({
+    const h = hash(variant.product?.slug ?? variant.id);
+    branches.forEach((b, i) => {
+      if (!carries(i, h)) return;
+      const oos = (h + i) % 9 === 0; // some carried-but-OOS for realism
+      const quantity = oos ? 0 : 5 + ((h + i * 7) % 40);
+      rows.push(
+        inventoryRepo.create({
           branchId: b.id,
           variantId: variant.id,
-          quantity: STOCK_PLAN[i] ?? 0,
-          status: (STOCK_PLAN[i] ?? 0) > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK,
+          quantity,
+          status:
+            quantity > 0
+              ? InventoryStatus.IN_STOCK
+              : InventoryStatus.OUT_OF_STOCK,
         }),
-      ),
-    );
+      );
+    });
   }
+  await inventoryRepo.save(rows);
+  return rows.length;
 }
 type ProductOptionValueRef = { id: string };
 
@@ -195,7 +393,9 @@ function buildSpecialtyProducts(): SeedProduct[] {
     const attributes = [
       { key: 'region', label: 'Vùng miền', value: d.region },
       ...(d.cert ? [{ key: 'cert', label: 'Chứng nhận', value: d.cert }] : []),
-      ...(d.flavor ? [{ key: 'flavor', label: 'Hương vị', value: d.flavor }] : []),
+      ...(d.flavor
+        ? [{ key: 'flavor', label: 'Hương vị', value: d.flavor }]
+        : []),
     ];
 
     if (d.weights.length > 1) {
@@ -218,7 +418,13 @@ function buildSpecialtyProducts(): SeedProduct[] {
         shortDescription: `${d.name} — đặc sản Đà Lạt, tự nhiên từ đất, ngọt lành từ tâm.`,
         image: d.img,
         attributes,
-        options: [{ name: 'Quy cách', displayType: OptionDisplayType.PILL, values: d.weights }],
+        options: [
+          {
+            name: 'Quy cách',
+            displayType: OptionDisplayType.PILL,
+            values: d.weights,
+          },
+        ],
         variants,
       };
     }
@@ -251,14 +457,38 @@ const OTHER_PRODUCTS: SeedProduct[] = [
     image: 'https://picsum.photos/seed/ao-thun-aurora/600/750',
     attributes: [{ key: 'material', label: 'Chất liệu', value: 'Cotton' }],
     options: [
-      { name: 'Màu sắc', displayType: OptionDisplayType.SWATCH, values: ['Đen', 'Trắng'] },
-      { name: 'Kích thước', displayType: OptionDisplayType.PILL, values: ['M', 'L'] },
+      {
+        name: 'Màu sắc',
+        displayType: OptionDisplayType.SWATCH,
+        values: ['Đen', 'Trắng'],
+      },
+      {
+        name: 'Kích thước',
+        displayType: OptionDisplayType.PILL,
+        values: ['M', 'L'],
+      },
     ],
     variants: [
-      { sku: 'ATA-DEN-M', price: '180000.00', optionValues: { 'Màu sắc': 'Đen', 'Kích thước': 'M' } },
-      { sku: 'ATA-DEN-L', price: '180000.00', optionValues: { 'Màu sắc': 'Đen', 'Kích thước': 'L' } },
-      { sku: 'ATA-TRG-M', price: '180000.00', optionValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'M' } },
-      { sku: 'ATA-TRG-L', price: '180000.00', optionValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'L' } },
+      {
+        sku: 'ATA-DEN-M',
+        price: '180000.00',
+        optionValues: { 'Màu sắc': 'Đen', 'Kích thước': 'M' },
+      },
+      {
+        sku: 'ATA-DEN-L',
+        price: '180000.00',
+        optionValues: { 'Màu sắc': 'Đen', 'Kích thước': 'L' },
+      },
+      {
+        sku: 'ATA-TRG-M',
+        price: '180000.00',
+        optionValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'M' },
+      },
+      {
+        sku: 'ATA-TRG-L',
+        price: '180000.00',
+        optionValues: { 'Màu sắc': 'Trắng', 'Kích thước': 'L' },
+      },
     ],
   },
   {
@@ -270,11 +500,29 @@ const OTHER_PRODUCTS: SeedProduct[] = [
     basePrice: '650000.00',
     shortDescription: 'Giày chạy bộ NorthPeak — chất lượng tuyển chọn.',
     image: 'https://picsum.photos/seed/giay-northpeak/600/750',
-    options: [{ name: 'Kích thước', displayType: OptionDisplayType.PILL, values: ['40', '41', '42'] }],
+    options: [
+      {
+        name: 'Kích thước',
+        displayType: OptionDisplayType.PILL,
+        values: ['40', '41', '42'],
+      },
+    ],
     variants: [
-      { sku: 'NPR-40', price: '650000.00', optionValues: { 'Kích thước': '40' } },
-      { sku: 'NPR-41', price: '650000.00', optionValues: { 'Kích thước': '41' } },
-      { sku: 'NPR-42', price: '650000.00', optionValues: { 'Kích thước': '42' } },
+      {
+        sku: 'NPR-40',
+        price: '650000.00',
+        optionValues: { 'Kích thước': '40' },
+      },
+      {
+        sku: 'NPR-41',
+        price: '650000.00',
+        optionValues: { 'Kích thước': '41' },
+      },
+      {
+        sku: 'NPR-42',
+        price: '650000.00',
+        optionValues: { 'Kích thước': '42' },
+      },
     ],
   },
   {
@@ -331,12 +579,17 @@ async function seed() {
 
   // Admin
   const customers = ds.getRepository(Customer);
-  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? 'admin@shopping.local').toLowerCase();
+  const adminEmail = (
+    process.env.SEED_ADMIN_EMAIL ?? 'admin@shopping.local'
+  ).toLowerCase();
   if (!(await customers.findOne({ where: { email: adminEmail } }))) {
     await customers.save(
       customers.create({
         email: adminEmail,
-        passwordHash: await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? 'admin12345', 10),
+        passwordHash: await bcrypt.hash(
+          process.env.SEED_ADMIN_PASSWORD ?? 'admin12345',
+          10,
+        ),
         firstName: 'Admin',
         role: CustomerRole.ADMIN,
       }),
@@ -376,10 +629,14 @@ async function seed() {
   }
   console.log(`  ✓ ${CATEGORIES.length} categories, ${BRANDS.length} brands`);
 
-  // Products (specialties + samples) + per-branch inventory
+  // Products (specialties + samples)
   const all = [...buildSpecialtyProducts(), ...OTHER_PRODUCTS];
-  for (const p of all) await seedProduct(ds, p, branches, brandId, categoryId);
-  console.log(`  ✓ ${all.length} products (+ variants + inventory)`);
+  for (const p of all) await seedProduct(ds, p, brandId, categoryId);
+  console.log(`  ✓ ${all.length} products (+ variants)`);
+
+  // Per-branch inventory (different subset per branch)
+  const invCount = await seedInventory(ds, branches);
+  console.log(`  ✓ ${invCount} inventory rows (per-branch distribution)`);
 
   // Vouchers
   const voucherRepo = ds.getRepository(Voucher);

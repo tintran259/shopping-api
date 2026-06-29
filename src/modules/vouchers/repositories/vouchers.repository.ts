@@ -47,11 +47,9 @@ export class VouchersRepository {
       amount: string;
     },
   ): Promise<void> {
-    await manager.getRepository(Voucher).increment(
-      { id: data.voucherId },
-      'usedCount',
-      1,
-    );
+    await manager
+      .getRepository(Voucher)
+      .increment({ id: data.voucherId }, 'usedCount', 1);
     await manager
       .getRepository(VoucherRedemption)
       .save(manager.getRepository(VoucherRedemption).create(data));

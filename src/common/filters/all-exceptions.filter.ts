@@ -29,7 +29,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message: unknown = 'Internal server error';
     if (exception instanceof HttpException) {
       const res = exception.getResponse();
-      message = typeof res === 'string' ? res : (res as any).message ?? res;
+      message = typeof res === 'string' ? res : ((res as any).message ?? res);
     }
 
     if (status >= 500) {

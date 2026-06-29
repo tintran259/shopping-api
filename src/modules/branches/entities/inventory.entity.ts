@@ -27,6 +27,10 @@ export class Inventory extends BaseEntity {
   quantity: number;
 
   @ApiProperty({ enum: InventoryStatus })
-  @Column({ type: 'enum', enum: InventoryStatus, default: InventoryStatus.IN_STOCK })
+  @Column({
+    type: 'enum',
+    enum: InventoryStatus,
+    default: InventoryStatus.IN_STOCK,
+  })
   status: InventoryStatus;
 }

@@ -9,7 +9,7 @@ export class CustomersRepository {
   constructor(
     @InjectRepository(Customer)
     private readonly repo: Repository<Customer>,
-  ) {}
+  ) { }
 
   create(data: Partial<Customer>): Customer {
     return this.repo.create(data);

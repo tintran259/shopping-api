@@ -36,7 +36,10 @@ export class Product extends BaseEntity {
   @Column()
   name: string;
 
-  @ManyToOne(() => Brand, (b) => b.products, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => Brand, (b) => b.products, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'brand_id' })
   brand?: Brand;
 
@@ -55,12 +58,26 @@ export class Product extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @ApiProperty({ description: 'Display base price (variant holds the authoritative price)' })
-  @Column({ name: 'base_price', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  @ApiProperty({
+    description: 'Display base price (variant holds the authoritative price)',
+  })
+  @Column({
+    name: 'base_price',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
   basePrice: string;
 
   @ApiProperty({ required: false })
-  @Column({ name: 'compare_at_price', type: 'numeric', precision: 12, scale: 2, nullable: true })
+  @Column({
+    name: 'compare_at_price',
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    nullable: true,
+  })
   compareAtPrice?: string;
 
   @ApiProperty({ default: 'VND' })
@@ -72,7 +89,13 @@ export class Product extends BaseEntity {
   flags: ProductFlags;
 
   @ApiProperty({ default: 0 })
-  @Column({ name: 'rating_avg', type: 'numeric', precision: 3, scale: 2, default: 0 })
+  @Column({
+    name: 'rating_avg',
+    type: 'numeric',
+    precision: 3,
+    scale: 2,
+    default: 0,
+  })
   ratingAvg: string;
 
   @ApiProperty({ default: 0 })

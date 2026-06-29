@@ -7,7 +7,15 @@ export class CreateWishlistDto {
 
 export class AddWishlistItemDto {
   @ApiProperty({ format: 'uuid' }) @IsUUID() productId: string;
-  @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID() variantId?: string;
-  @ApiPropertyOptional({ format: 'uuid', description: 'Target list (defaults to your default list)' })
-  @IsOptional() @IsUUID() wishlistId?: string;
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Target list (defaults to your default list)',
+  })
+  @IsOptional()
+  @IsUUID()
+  wishlistId?: string;
 }
