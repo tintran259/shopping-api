@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { ProductQueryDto, parseAttrs } from '../dto/product.dto';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { Product } from '../entities/product.entity';
@@ -55,6 +55,14 @@ export class ProductsRepository {
 
   findById(id: string): Promise<Product | null> {
     return this.repo.findOne({ where: { id }, relations: FULL_RELATIONS });
+  }
+
+  findByIds(ids: string[]): Promise<Product[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.repo.find({
+      where: { id: In(ids) },
+      relations: FULL_RELATIONS,
+    });
   }
 
   /** Filtered + sorted + paginated search → [items, total]. */

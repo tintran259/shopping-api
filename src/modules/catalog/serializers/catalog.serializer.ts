@@ -48,6 +48,8 @@ export interface ProductSummaryDto {
   slug: string;
   name: string;
   thumbnail: ImageDto;
+  /** Cheapest/only variant — the target for quick-add (cart needs a variant). */
+  defaultVariantId: string | null;
   price: PriceDto;
   priceVaries: boolean;
   brand: { id: string; slug: string; name: string } | null;
@@ -171,6 +173,7 @@ export function toProductSummary(
     slug: p.slug,
     name: p.name,
     thumbnail: pickImage(p.images),
+    defaultVariantId: cheapestVariant(variants)?.id ?? null,
     price: priceOf(p, variants),
     priceVaries: new Set(prices).size > 1,
     brand: p.brand

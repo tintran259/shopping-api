@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Customer } from './customer.entity';
@@ -16,6 +16,10 @@ export class Address extends BaseEntity {
 
   @Column({ name: 'customer_id' })
   customerId: string;
+
+  @ApiPropertyOptional({ description: 'Optional label, e.g. "Nhà riêng"' })
+  @Column({ type: 'varchar', nullable: true })
+  label?: string;
 
   @ApiProperty()
   @Column({ name: 'recipient_name' })

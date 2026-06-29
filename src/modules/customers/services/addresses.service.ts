@@ -30,6 +30,7 @@ export class AddressesService {
     return this.addresses.save(
       this.addresses.create({
         customerId,
+        label: dto.label,
         recipientName: dto.recipientName,
         phone: dto.phone,
         provinceCode: province.code,
@@ -63,6 +64,7 @@ export class AddressesService {
       address.wardCode = ward.code;
       address.wardName = ward.name;
     }
+    if (dto.label !== undefined) address.label = dto.label;
     if (dto.recipientName != null) address.recipientName = dto.recipientName;
     if (dto.phone != null) address.phone = dto.phone;
     if (dto.street != null) address.street = dto.street;

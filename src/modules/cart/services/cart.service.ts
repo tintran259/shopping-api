@@ -9,6 +9,7 @@ import { ProductsService } from '../../catalog/services/products.service';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto/cart.dto';
 import { Cart } from '../entities/cart.entity';
 import { CartRepository } from '../repositories/cart.repository';
+import { CartLineDto, toCartLine } from '../serializers/cart.serializer';
 
 @Injectable()
 export class CartService {
@@ -111,24 +112,35 @@ export class CartService {
     }
   }
 
-  serialize(cart: Cart) {
-    const items = (cart.items ?? []).map((i) => ({
-      id: i.id,
-      variantId: i.variantId,
-      sku: i.variant?.sku,
-      productName: i.variant?.product?.name,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      lineTotal: (Number(i.unitPrice) * i.quantity).toFixed(2),
-    }));
-    const subtotal = items.reduce((sum, i) => sum + Number(i.lineTotal), 0);
+  /** FE-shaped cart: each line carries the full product/variant snapshot
+   *  (image, price, branch stock) so the storefront renders without a refetch. */
+  async serialize(cart: Cart) {
+    const items = cart.items ?? [];
+    const productIds = [
+      ...new Set(items.map((i) => i.variant?.productId).filter(Boolean)),
+    ] as string[];
+    const products = await Promise.all(
+      productIds.map((id) => this.products.detailById(id).catch(() => null)),
+    );
+    const byId = new Map(products.filter((p) => !!p).map((p) => [p!.id, p!]));
+
+    const lines = items
+      .map((i) => {
+        const product = i.variant?.productId
+          ? byId.get(i.variant.productId)
+          : undefined;
+        return product ? toCartLine(i, product) : null;
+      })
+      .filter((l): l is CartLineDto => !!l);
+
+    const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
     return {
       id: cart.id,
       status: cart.status,
       branchId: cart.branchId,
       currency: cart.currency,
-      items,
-      itemCount: items.reduce((n, i) => n + i.quantity, 0),
+      lines,
+      itemCount: lines.reduce((n, l) => n + l.quantity, 0),
       subtotal: subtotal.toFixed(2),
     };
   }

@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -13,7 +14,11 @@ import {
   AuthUser,
   CurrentUser,
 } from '../../../common/decorators/current-user.decorator';
-import { AddWishlistItemDto, CreateWishlistDto } from '../dto/wishlist.dto';
+import {
+  AddWishlistItemDto,
+  CreateWishlistDto,
+  UpdateWishlistDto,
+} from '../dto/wishlist.dto';
 import { WishlistService } from '../services/wishlist.service';
 
 @ApiTags('wishlist')
@@ -32,6 +37,26 @@ export class WishlistController {
   @ApiOperation({ summary: 'Create a wishlist' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateWishlistDto) {
     return this.wishlist.create(user.id, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Rename a wishlist' })
+  rename(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateWishlistDto,
+  ) {
+    return this.wishlist.rename(user.id, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete a wishlist' })
+  removeList(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.wishlist.removeList(user.id, id);
   }
 
   @Post('items')

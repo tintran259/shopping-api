@@ -1,50 +1,73 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AddWishlistItemDto, CreateWishlistDto } from '../dto/wishlist.dto';
+import { ProductsService } from '../../catalog/services/products.service';
+import { ProductSummaryDto } from '../../catalog/serializers/catalog.serializer';
+import {
+  AddWishlistItemDto,
+  CreateWishlistDto,
+  UpdateWishlistDto,
+} from '../dto/wishlist.dto';
 import { Wishlist } from '../entities/wishlist.entity';
 import { WishlistRepository } from '../repositories/wishlist.repository';
+import { toWishlistDto, WishlistDto } from '../serializers/wishlist.serializer';
 
 @Injectable()
 export class WishlistService {
-  constructor(private readonly wishlists: WishlistRepository) {}
+  constructor(
+    private readonly wishlists: WishlistRepository,
+    private readonly products: ProductsService,
+  ) {}
 
-  findAll(customerId: string): Promise<Wishlist[]> {
-    return this.wishlists.findAll(customerId);
+  async findAll(customerId: string): Promise<WishlistDto[]> {
+    const lists = await this.wishlists.findAll(customerId);
+    return this.serialize(lists);
   }
 
-  /** Lazily creates a default list so the storefront always has a target. */
-  async getOrCreateDefault(customerId: string): Promise<Wishlist> {
-    const existing = await this.wishlists.findDefault(customerId);
-    if (existing) return existing;
-    return this.wishlists.saveList(
-      this.wishlists.createList({
-        customerId,
-        name: 'My wishlist',
-        isDefault: true,
-      }),
-    );
-  }
-
-  create(customerId: string, dto: CreateWishlistDto): Promise<Wishlist> {
-    return this.wishlists.saveList(
+  async create(
+    customerId: string,
+    dto: CreateWishlistDto,
+  ): Promise<WishlistDto> {
+    const list = await this.wishlists.saveList(
       this.wishlists.createList({ ...dto, customerId }),
     );
+    return (await this.serialize([list]))[0];
+  }
+
+  async rename(
+    customerId: string,
+    id: string,
+    dto: UpdateWishlistDto,
+  ): Promise<WishlistDto> {
+    const list = await this.ownList(customerId, id);
+    list.name = dto.name;
+    await this.wishlists.saveList(list);
+    return (await this.serialize([await this.ownList(customerId, id)]))[0];
+  }
+
+  async removeList(customerId: string, id: string): Promise<void> {
+    await this.wishlists.removeList(await this.ownList(customerId, id));
   }
 
   async addItem(
     customerId: string,
     dto: AddWishlistItemDto,
-  ): Promise<Wishlist> {
-    const list = dto.wishlistId
-      ? await this.ownList(customerId, dto.wishlistId)
-      : await this.getOrCreateDefault(customerId);
-    await this.wishlists.saveItem(
-      this.wishlists.createItem({
-        wishlistId: list.id,
-        productId: dto.productId,
-        variantId: dto.variantId,
-      }),
+  ): Promise<WishlistDto> {
+    const list = await this.ownList(customerId, dto.wishlistId);
+    // Idempotent: skip if the same product (+variant) is already saved here.
+    const dup = (list.items ?? []).some(
+      (i) =>
+        i.productId === dto.productId &&
+        (i.variantId ?? null) === (dto.variantId ?? null),
     );
-    return this.ownList(customerId, list.id);
+    if (!dup) {
+      await this.wishlists.saveItem(
+        this.wishlists.createItem({
+          wishlistId: list.id,
+          productId: dto.productId,
+          variantId: dto.variantId,
+        }),
+      );
+    }
+    return (await this.serialize([await this.ownList(customerId, list.id)]))[0];
   }
 
   async removeItem(customerId: string, itemId: string): Promise<void> {
@@ -53,6 +76,18 @@ export class WishlistService {
       throw new NotFoundException('Wishlist item not found');
     }
     await this.wishlists.removeItem(item);
+  }
+
+  /** Attach FE-shaped product summaries to a set of lists (one catalog query). */
+  private async serialize(lists: Wishlist[]): Promise<WishlistDto[]> {
+    const ids = [
+      ...new Set(lists.flatMap((l) => (l.items ?? []).map((i) => i.productId))),
+    ];
+    const summaries = await this.products.summariesByIds(ids);
+    const byId = new Map<string, ProductSummaryDto>(
+      summaries.map((s) => [s.id, s]),
+    );
+    return lists.map((l) => toWishlistDto(l, byId));
   }
 
   private async ownList(customerId: string, id: string): Promise<Wishlist> {

@@ -130,6 +130,17 @@ export class ProductsService {
     return facets;
   }
 
+  /** FE-shaped summaries for a set of ids (e.g. wishlist items). Order follows `ids`. */
+  async summariesByIds(ids: string[]): Promise<ProductSummaryDto[]> {
+    if (!ids.length) return [];
+    const products = await this.products.findByIds(ids);
+    const inv = await this.inventoryFor(products);
+    const byId = new Map(products.map((p) => [p.id, toProductSummary(p, inv)]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((s): s is ProductSummaryDto => !!s);
+  }
+
   /** Storefront product detail (FE-shaped). */
   async detailBySlug(slug: string): Promise<ProductDto> {
     const product = await this.findBySlug(slug);

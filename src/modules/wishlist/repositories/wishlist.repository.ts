@@ -20,10 +20,6 @@ export class WishlistRepository {
     });
   }
 
-  findDefault(customerId: string): Promise<Wishlist | null> {
-    return this.lists.findOne({ where: { customerId, isDefault: true } });
-  }
-
   findOwn(customerId: string, id: string): Promise<Wishlist | null> {
     return this.lists.findOne({ where: { id, customerId } });
   }
@@ -34,6 +30,10 @@ export class WishlistRepository {
 
   saveList(list: Wishlist): Promise<Wishlist> {
     return this.lists.save(list);
+  }
+
+  removeList(list: Wishlist): Promise<Wishlist> {
+    return this.lists.remove(list);
   }
 
   createItem(data: Partial<WishlistItem>): WishlistItem {
