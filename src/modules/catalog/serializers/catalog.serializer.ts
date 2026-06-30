@@ -84,6 +84,7 @@ export interface ProductDto extends Omit<ProductSummaryDto, 'thumbnail'> {
     options: Record<string, string>;
     price: PriceDto;
     stock: number;
+    branchStock: BranchStockDto[];
     image?: ImageDto;
   }[];
   categories: { id: string; slug: string; name: string }[];
@@ -248,6 +249,7 @@ export function toProduct(p: Product, inv: InventoryMap): ProductDto {
         currency: p.currency,
       },
       stock: variantStock(v, inv),
+      branchStock: branchStockOf([v], inv),
       image: v.imageUrl ? { url: v.imageUrl, alt: p.name } : undefined,
     })),
     categories: (p.categories ?? []).map((c) => ({
