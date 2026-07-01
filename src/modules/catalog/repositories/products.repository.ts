@@ -234,7 +234,7 @@ export class ProductsRepository {
   findVariantById(id: string): Promise<ProductVariant | null> {
     return this.variantRepo.findOne({
       where: { id },
-      relations: { product: true },
+      relations: { product: { images: true }, optionValues: true },
     });
   }
 }

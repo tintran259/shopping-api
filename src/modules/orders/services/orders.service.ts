@@ -33,6 +33,30 @@ interface OrderLineItem {
   sku: string;
   unitPrice: string;
   quantity: number;
+  imageUrl?: string;
+}
+
+/** Human variant label snapshot, e.g. "500g" or "Đen · M". Empty for
+ *  single-variant products (no options) — nothing meaningful to show. */
+function variantLabel(variant?: {
+  optionValues?: { value: string; sortOrder: number }[];
+}): string {
+  return [...(variant?.optionValues ?? [])]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((v) => v.value)
+    .join(' · ');
+}
+
+/** Snapshot image for an order line: prefer the variant image, else the
+ *  product's primary (or first) image. */
+function lineImageUrl(variant?: {
+  imageUrl?: string;
+  product?: { images?: { url: string; isPrimary: boolean }[] };
+}): string | undefined {
+  if (variant?.imageUrl) return variant.imageUrl;
+  const images = variant?.product?.images ?? [];
+  const primary = images.find((i) => i.isPrimary) ?? images[0];
+  return primary?.url;
 }
 
 @Injectable()
@@ -57,10 +81,11 @@ export class OrdersService {
     const lineItems: OrderLineItem[] = cart.items.map((i) => ({
       variantId: i.variantId,
       productName: i.variant?.product?.name ?? i.variant?.sku ?? 'Item',
-      variantTitle: i.variant?.sku ?? '',
+      variantTitle: variantLabel(i.variant),
       sku: i.variant?.sku ?? '',
       unitPrice: i.unitPrice,
       quantity: i.quantity,
+      imageUrl: lineImageUrl(i.variant),
     }));
 
     return this.placeOrder({
@@ -84,10 +109,11 @@ export class OrdersService {
       lineItems.push({
         variantId: variant.id,
         productName: variant.product?.name ?? variant.sku,
-        variantTitle: variant.sku,
+        variantTitle: variantLabel(variant),
         sku: variant.sku,
         unitPrice: variant.price,
         quantity: it.quantity,
+        imageUrl: lineImageUrl(variant),
       });
     }
     return this.placeOrder({ dto, lineItems, currency: 'VND' });
@@ -256,6 +282,25 @@ export class OrdersService {
   /** Cancel an order and return its stock (release if reserved, restock if committed). */
   async cancel(id: string): Promise<Order> {
     const order = await this.findOne(id);
+    order.status = OrderStatus.CANCELLED;
+    return this.cancelStock(order);
+  }
+
+  /** Statuses a customer may still cancel from (before the order ships out). */
+  private static readonly CANCELLABLE = new Set<OrderStatus>([
+    OrderStatus.PENDING,
+    OrderStatus.CONFIRMED,
+  ]);
+
+  /** Customer-initiated cancel: must own the order and it must not have shipped. */
+  async cancelForUser(customerId: string, id: string): Promise<Order> {
+    const order = await this.findOneForUser(customerId, id);
+    if (order.status === OrderStatus.CANCELLED) return order; // idempotent
+    if (!OrdersService.CANCELLABLE.has(order.status)) {
+      throw new BadRequestException(
+        'Đơn hàng đang được xử lý/giao nên không thể hủy. Vui lòng liên hệ hỗ trợ.',
+      );
+    }
     order.status = OrderStatus.CANCELLED;
     return this.cancelStock(order);
   }

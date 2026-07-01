@@ -73,6 +73,16 @@ export class OrdersController {
     return this.orders.findOneForUser(user.id, id);
   }
 
+  @Post(':id/cancel')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel one of my orders (if not yet shipped)' })
+  cancelMine(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.orders.cancelForUser(user.id, id);
+  }
+
   // ── Admin ──────────────────────────────────────────────────────────
   @Get('admin/all')
   @ApiBearerAuth()

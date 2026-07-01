@@ -24,6 +24,10 @@ export class OrderItem extends BaseEntity {
   @Column({ name: 'product_name' })
   productName: string;
 
+  @ApiProperty({ required: false, description: 'Snapshot of the product image' })
+  @Column({ name: 'image_url', nullable: true })
+  imageUrl?: string;
+
   @ApiProperty()
   @Column({ name: 'variant_title' })
   variantTitle: string;

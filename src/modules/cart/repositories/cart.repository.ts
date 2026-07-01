@@ -17,7 +17,9 @@ export class CartRepository {
   findActive(customerId: string): Promise<Cart | null> {
     return this.carts.findOne({
       where: { customerId, status: CartStatus.ACTIVE },
-      relations: { items: { variant: { product: true } } },
+      relations: {
+        items: { variant: { product: { images: true }, optionValues: true } },
+      },
     });
   }
 
