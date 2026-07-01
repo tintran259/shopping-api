@@ -109,8 +109,12 @@ export function indexInventory(rows: Inventory[]): InventoryMap {
   return map;
 }
 
+// Sellable = physical on hand minus what's reserved by unfulfilled orders.
+const availableOf = (r: Inventory): number =>
+  Math.max(0, r.quantity - r.reserved);
+
 const variantStock = (v: ProductVariant, inv: InventoryMap): number =>
-  (inv.get(v.id) ?? []).reduce((sum, r) => sum + r.quantity, 0);
+  (inv.get(v.id) ?? []).reduce((sum, r) => sum + availableOf(r), 0);
 
 function branchStockOf(
   variants: ProductVariant[],
@@ -120,8 +124,9 @@ function branchStockOf(
   for (const v of variants) {
     for (const r of inv.get(v.id) ?? []) {
       const e = byBranch.get(r.branchId) ?? { quantity: 0, inStock: false };
-      e.quantity += r.quantity;
-      if (r.quantity > 0 || r.status === InventoryStatus.PREORDER)
+      const available = availableOf(r);
+      e.quantity += available;
+      if (available > 0 || r.status === InventoryStatus.PREORDER)
         e.inStock = true;
       byBranch.set(r.branchId, e);
     }

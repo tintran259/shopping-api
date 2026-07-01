@@ -37,31 +37,83 @@ export class InventoryRepository {
     return this.repo.findOne({ where: { branchId, variantId } });
   }
 
-  /**
-   * Lock the (branch, variant) row inside an existing transaction and decrement
-   * stock, rejecting oversell. Called by the orders checkout transaction.
-   */
-  async reserve(
+  /** Lock the (branch, variant) row inside an existing transaction. */
+  private async lockRecord(
     manager: EntityManager,
     branchId: string,
     variantId: string,
-    quantity: number,
-  ): Promise<void> {
-    const repo = manager.getRepository(Inventory);
-    const record = await repo.findOne({
+  ): Promise<Inventory> {
+    const record = await manager.getRepository(Inventory).findOne({
       where: { branchId, variantId },
       lock: { mode: 'pessimistic_write' },
     });
     if (!record) {
       throw new NotFoundException('No inventory for variant at the branch');
     }
-    if (
-      record.status !== InventoryStatus.PREORDER &&
-      record.quantity < quantity
-    ) {
+    return record;
+  }
+
+  /** Keep `status` in sync with physical quantity (leaves PREORDER untouched). */
+  private syncStatus(record: Inventory): void {
+    if (record.status === InventoryStatus.PREORDER) return;
+    record.status =
+      record.quantity > 0
+        ? InventoryStatus.IN_STOCK
+        : InventoryStatus.OUT_OF_STOCK;
+  }
+
+  /** Hold stock against availability (quantity − reserved) at order placement. */
+  async reserve(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    const record = await this.lockRecord(manager, branchId, variantId);
+    const available = record.quantity - record.reserved;
+    if (record.status !== InventoryStatus.PREORDER && available < quantity) {
       throw new BadRequestException('Insufficient stock at branch');
     }
-    record.quantity -= quantity;
-    await repo.save(record);
+    record.reserved += quantity;
+    await manager.getRepository(Inventory).save(record);
+  }
+
+  /** Convert a reservation into a physical deduction (payment captured/delivered). */
+  async commit(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    const record = await this.lockRecord(manager, branchId, variantId);
+    record.reserved = Math.max(0, record.reserved - quantity);
+    record.quantity = Math.max(0, record.quantity - quantity);
+    this.syncStatus(record);
+    await manager.getRepository(Inventory).save(record);
+  }
+
+  /** Drop a reservation without touching physical stock (cancelled before commit). */
+  async release(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    const record = await this.lockRecord(manager, branchId, variantId);
+    record.reserved = Math.max(0, record.reserved - quantity);
+    await manager.getRepository(Inventory).save(record);
+  }
+
+  /** Return already-committed stock to the shelf (cancel/refund after commit). */
+  async restock(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    const record = await this.lockRecord(manager, branchId, variantId);
+    record.quantity += quantity;
+    this.syncStatus(record);
+    await manager.getRepository(Inventory).save(record);
   }
 }

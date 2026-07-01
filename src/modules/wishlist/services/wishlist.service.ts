@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductsService } from '../../catalog/services/products.service';
-import { ProductSummaryDto } from '../../catalog/serializers/catalog.serializer';
+import { ProductDto } from '../../catalog/serializers/catalog.serializer';
 import {
   AddWishlistItemDto,
   CreateWishlistDto,
@@ -78,15 +78,13 @@ export class WishlistService {
     await this.wishlists.removeItem(item);
   }
 
-  /** Attach FE-shaped product summaries to a set of lists (one catalog query). */
+  /** Attach FE-shaped products (with variant details) to a set of lists. */
   private async serialize(lists: Wishlist[]): Promise<WishlistDto[]> {
     const ids = [
       ...new Set(lists.flatMap((l) => (l.items ?? []).map((i) => i.productId))),
     ];
-    const summaries = await this.products.summariesByIds(ids);
-    const byId = new Map<string, ProductSummaryDto>(
-      summaries.map((s) => [s.id, s]),
-    );
+    const products = await this.products.detailsByIds(ids);
+    const byId = new Map<string, ProductDto>(products.map((p) => [p.id, p]));
     return lists.map((l) => toWishlistDto(l, byId));
   }
 

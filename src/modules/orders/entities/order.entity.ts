@@ -4,6 +4,8 @@ import { BaseEntity } from '../../../common/entities/base.entity';
 import {
   FulfillmentType,
   OrderStatus,
+  OrderStockStatus,
+  PaymentMethodCode,
   PaymentStatus,
 } from '../../../common/enums';
 import { OrderItem } from './order-item.entity';
@@ -58,6 +60,19 @@ export class Order extends BaseEntity {
     default: PaymentStatus.PENDING,
   })
   paymentStatus: PaymentStatus;
+
+  @ApiProperty({ enum: OrderStockStatus })
+  @Column({
+    name: 'stock_status',
+    type: 'enum',
+    enum: OrderStockStatus,
+    default: OrderStockStatus.RESERVED,
+  })
+  stockStatus: OrderStockStatus;
+
+  @ApiProperty({ enum: PaymentMethodCode, required: false })
+  @Column({ name: 'payment_method_code', type: 'varchar', nullable: true })
+  paymentMethodCode?: PaymentMethodCode;
 
   @ApiProperty()
   @Column({ name: 'recipient_name' })

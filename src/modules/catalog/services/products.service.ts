@@ -141,6 +141,14 @@ export class ProductsService {
       .filter((s): s is ProductSummaryDto => !!s);
   }
 
+  /** Full FE-shaped details for a set of ids (variants included). Batched (2 queries). */
+  async detailsByIds(ids: string[]): Promise<ProductDto[]> {
+    if (!ids.length) return [];
+    const products = await this.products.findByIds(ids);
+    const inv = await this.inventoryFor(products);
+    return products.map((p) => toProduct(p, inv));
+  }
+
   /** Storefront product detail (FE-shaped). */
   async detailBySlug(slug: string): Promise<ProductDto> {
     const product = await this.findBySlug(slug);

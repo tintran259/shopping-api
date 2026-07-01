@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, LessThan, Not, Repository } from 'typeorm';
+import {
+  OrderStatus,
+  OrderStockStatus,
+  PaymentMethodCode,
+  PaymentStatus,
+} from '../../../common/enums';
 import { Order } from '../entities/order.entity';
 
 @Injectable()
@@ -39,5 +45,18 @@ export class OrdersRepository {
 
   findByCode(code: string): Promise<Order | null> {
     return this.repo.findOne({ where: { code } });
+  }
+
+  /** Prepaid orders still unpaid + holding stock, placed before `cutoff` (COD excluded). */
+  findStaleUnpaid(cutoff: Date): Promise<Order[]> {
+    return this.repo.find({
+      where: {
+        status: OrderStatus.PENDING,
+        paymentStatus: PaymentStatus.PENDING,
+        stockStatus: OrderStockStatus.RESERVED,
+        paymentMethodCode: Not(PaymentMethodCode.COD),
+        placedAt: LessThan(cutoff),
+      },
+    });
   }
 }

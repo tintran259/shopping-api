@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsEmail,
   IsEnum,
   IsInt,
@@ -8,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { FulfillmentType, PaymentMethodCode } from '../../../common/enums';
@@ -81,4 +84,32 @@ export class CheckoutDto {
   invoice?: InvoiceDto;
 
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Client-preset order code (e.g. bank-transfer memo). Falls back to a generated one.',
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
+}
+
+export class CheckoutItemDto {
+  @ApiProperty({ format: 'uuid' }) @IsUUID() variantId: string;
+  @ApiProperty({ minimum: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantity: number;
+}
+
+/** Guest checkout: same as {@link CheckoutDto} but items come from the body
+ *  (no server cart). Prices/stock are still recomputed server-side. */
+export class GuestCheckoutDto extends CheckoutDto {
+  @ApiProperty({ type: [CheckoutItemDto] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutItemDto)
+  items: CheckoutItemDto[];
 }

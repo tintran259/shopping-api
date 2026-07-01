@@ -22,9 +22,13 @@ export class Inventory extends BaseEntity {
   @Column({ name: 'variant_id' })
   variantId: string;
 
-  @ApiProperty({ default: 0 })
+  @ApiProperty({ default: 0, description: 'Physical stock on hand' })
   @Column({ type: 'int', default: 0 })
   quantity: number;
+
+  @ApiProperty({ default: 0, description: 'Held by unfulfilled orders' })
+  @Column({ type: 'int', default: 0 })
+  reserved: number;
 
   @ApiProperty({ enum: InventoryStatus })
   @Column({

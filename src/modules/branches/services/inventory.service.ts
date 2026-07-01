@@ -35,7 +35,7 @@ export class InventoryService {
     return this.inventory.save(record);
   }
 
-  /** Reserve stock during the order transaction. */
+  /** Hold stock at order placement (available = quantity − reserved). */
   reserve(
     manager: EntityManager,
     branchId: string,
@@ -43,5 +43,35 @@ export class InventoryService {
     quantity: number,
   ): Promise<void> {
     return this.inventory.reserve(manager, branchId, variantId, quantity);
+  }
+
+  /** Physically deduct a reservation (payment captured / delivered). */
+  commit(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    return this.inventory.commit(manager, branchId, variantId, quantity);
+  }
+
+  /** Drop a reservation without touching physical stock (cancelled before commit). */
+  release(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    return this.inventory.release(manager, branchId, variantId, quantity);
+  }
+
+  /** Return already-committed stock to the shelf (cancel/refund after commit). */
+  restock(
+    manager: EntityManager,
+    branchId: string,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    return this.inventory.restock(manager, branchId, variantId, quantity);
   }
 }

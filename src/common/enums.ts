@@ -64,6 +64,16 @@ export enum PaymentStatus {
   REFUNDED = 'refunded',
 }
 
+/** Where an order's stock currently sits (reserve → commit lifecycle). */
+export enum OrderStockStatus {
+  /** Held against available stock at placement (quantity not yet reduced). */
+  RESERVED = 'reserved',
+  /** Physically deducted from quantity (payment captured / delivered). */
+  COMMITTED = 'committed',
+  /** Hold returned to stock (order cancelled/expired). */
+  RELEASED = 'released',
+}
+
 /** Mirrors the `payment-method.code` enum in shopping-cms (Strapi). */
 export enum PaymentMethodCode {
   BANK_TRANSFER = 'bank_transfer',

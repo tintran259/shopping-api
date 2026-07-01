@@ -107,8 +107,10 @@ export class CartService {
     if (!record || record.status === InventoryStatus.OUT_OF_STOCK) {
       throw new BadRequestException('Out of stock at the selected branch');
     }
-    if (record.status !== InventoryStatus.PREORDER && record.quantity < qty) {
-      throw new BadRequestException(`Only ${record.quantity} in stock`);
+    // Sellable = physical on hand minus stock reserved by other unfulfilled orders.
+    const available = Math.max(0, record.quantity - record.reserved);
+    if (record.status !== InventoryStatus.PREORDER && available < qty) {
+      throw new BadRequestException(`Only ${available} in stock`);
     }
   }
 

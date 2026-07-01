@@ -24,7 +24,7 @@ import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CustomerRole } from '../../../common/enums';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { CheckoutDto } from '../dto/checkout.dto';
+import { CheckoutDto, GuestCheckoutDto } from '../dto/checkout.dto';
 import { UpdateOrderStatusDto } from '../dto/update-order-status.dto';
 import { OrdersService } from '../services/orders.service';
 
@@ -38,6 +38,13 @@ export class OrdersController {
   @ApiOperation({ summary: 'Place an order from my active cart' })
   checkout(@CurrentUser() user: AuthUser, @Body() dto: CheckoutDto) {
     return this.orders.checkout(user.id, dto);
+  }
+
+  @Public()
+  @Post('guest-checkout')
+  @ApiOperation({ summary: 'Place an order as a guest (items in body)' })
+  guestCheckout(@Body() dto: GuestCheckoutDto) {
+    return this.orders.guestCheckout(dto);
   }
 
   @Public()
