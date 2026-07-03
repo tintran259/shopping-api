@@ -7,6 +7,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { VouchersModule } from '../vouchers/vouchers.module';
+import { AdminOrdersController } from './controllers/admin-orders.controller';
 import { OrdersController } from './controllers/orders.controller';
 import { OrdersCron } from './orders.cron';
 import { Order } from './entities/order.entity';
@@ -27,7 +28,7 @@ import { OrdersService } from './services/orders.service';
     BranchesModule,
     LocationsModule,
   ],
-  controllers: [OrdersController],
+  controllers: [OrdersController, AdminOrdersController],
   providers: [OrdersService, OrdersRepository, OrdersCron],
   exports: [OrdersService],
 })

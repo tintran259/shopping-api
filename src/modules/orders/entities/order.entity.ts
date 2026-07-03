@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Column, Entity, Index, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import {
   FulfillmentType,
@@ -8,6 +15,7 @@ import {
   PaymentMethodCode,
   PaymentStatus,
 } from '../../../common/enums';
+import { Branch } from '../../branches/entities/branch.entity';
 import { OrderItem } from './order-item.entity';
 
 export interface ShippingAddressSnapshot {
@@ -30,7 +38,7 @@ export interface InvoiceSnapshot {
 
 @Entity('orders')
 export class Order extends BaseEntity {
-  @ApiProperty({ example: 'DHK3F8A1' })
+  @ApiProperty({ example: 'GH-COD-K3F8A1' })
   @Index({ unique: true })
   @Column()
   code: string;
@@ -43,6 +51,10 @@ export class Order extends BaseEntity {
   @ApiProperty({ format: 'uuid' })
   @Column({ name: 'branch_id', type: 'uuid' })
   branchId: string;
+
+  @ManyToOne(() => Branch, { eager: false, nullable: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch?: Branch;
 
   @ApiProperty({ enum: FulfillmentType })
   @Column({ type: 'enum', enum: FulfillmentType })

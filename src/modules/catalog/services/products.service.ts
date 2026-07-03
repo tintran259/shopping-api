@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PaginatedResult } from '../../../common/dto/paginated-result';
 import {
   CreateProductDto,
   ProductQueryDto,
@@ -71,6 +72,16 @@ export class ProductsService {
       },
       facets,
     };
+  }
+
+  /**
+   * Admin list — same filters/sort/pagination as {@link list} but returns the
+   * raw product entities (with relations) in the standard {data, meta} envelope,
+   * so the back-office edits against the real shape (basePrice, variants, …).
+   */
+  async listRaw(query: ProductQueryDto): Promise<PaginatedResult<Product>> {
+    const [data, total] = await this.products.search(query);
+    return new PaginatedResult(data, total, query.page, query.limit);
   }
 
   /** Lightweight typeahead: matching product summaries + total (no facets). */

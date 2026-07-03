@@ -12,6 +12,7 @@ import {
   InventoryStatus,
   OrderStatus,
   OrderStockStatus,
+  PaymentMethodCode,
   PaymentStatus,
 } from '../../../common/enums';
 import { InventoryService } from '../../branches/services/inventory.service';
@@ -21,6 +22,8 @@ import { AddressesService } from '../../customers/services/addresses.service';
 import { LocationsService } from '../../locations/services/locations.service';
 import { PaymentsService } from '../../payments/services/payments.service';
 import { VouchersService } from '../../vouchers/services/vouchers.service';
+import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
+import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
 import { CheckoutDto, GuestCheckoutDto } from '../dto/checkout.dto';
 import { Order, ShippingAddressSnapshot } from '../entities/order.entity';
 import { OrdersRepository } from '../repositories/orders.repository';
@@ -169,7 +172,9 @@ export class OrdersService {
       }
 
       const order = await this.orders.createInTx(manager, {
-        code: dto.code?.trim() || this.generateOrderCode(),
+        code:
+          dto.code?.trim() ||
+          this.generateOrderCode(dto.fulfillment, dto.paymentMethodCode),
         customerId,
         branchId: dto.branchId,
         fulfillment: dto.fulfillment,
@@ -225,13 +230,43 @@ export class OrdersService {
     return new PaginatedResult(data, total, query.page, query.limit);
   }
 
-  async findAll(query: PaginationQueryDto) {
-    const [data, total] = await this.orders.paginate(
-      {},
+  async findAll(query: AdminOrderQueryDto) {
+    const [data, total] = await this.orders.searchAdmin(
+      {
+        branchId: query.branchId,
+        status: query.status,
+        paymentStatus: query.paymentStatus,
+        q: query.q,
+      },
+      { by: query.sortBy ?? 'createdAt', order: query.sortOrder ?? 'DESC' },
       query.skip,
       query.limit,
     );
     return new PaginatedResult(data, total, query.page, query.limit);
+  }
+
+  /** Dashboard aggregate — branch/date-range scoped, computed in SQL so it's
+   *  correct for any order volume (not capped like the paginated list). */
+  async summary(query: AdminOrderSummaryQueryDto) {
+    const raw = await this.orders.summary({
+      branchId: query.branchId,
+      dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
+      dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
+    });
+
+    const counts = new Map(
+      raw.statusRows.map((r) => [r.status, Number(r.count)]),
+    );
+    const byStatus = Object.fromEntries(
+      Object.values(OrderStatus).map((s) => [s, counts.get(s) ?? 0]),
+    ) as Record<OrderStatus, number>;
+
+    return {
+      totalOrders: raw.totalOrders,
+      totalRevenue: raw.totalRevenue,
+      byStatus,
+      series: raw.seriesRows.map((r) => ({ date: r.day, revenue: r.revenue })),
+    };
   }
 
   async findOneForUser(customerId: string, id: string): Promise<Order> {
@@ -255,14 +290,58 @@ export class OrdersService {
     return order;
   }
 
+  /** Statuses that mean the goods have already left the building — cancelling from
+   *  here needs a manual return process, not a stock-only rollback. */
+  private static readonly SHIPPED_OR_BEYOND = new Set<OrderStatus>([
+    OrderStatus.SHIPPED,
+    OrderStatus.DELIVERED,
+  ]);
+
+  /** Payment methods captured upfront (must be confirmed PAID before staff start
+   *  fulfilling) as opposed to COD, which is captured at the door. */
+  private static readonly PREPAID_METHODS = new Set<PaymentMethodCode>([
+    PaymentMethodCode.BANK_TRANSFER,
+    PaymentMethodCode.MOMO,
+    PaymentMethodCode.ATM_CARD,
+  ]);
+
+  /** Statuses that mean fulfilment has started. */
+  private static readonly FULFILLMENT_STARTED = new Set<OrderStatus>([
+    OrderStatus.PROCESSING,
+    OrderStatus.SHIPPED,
+    OrderStatus.DELIVERED,
+  ]);
+
   async updateStatus(id: string, status: OrderStatus): Promise<Order> {
     const order = await this.findOne(id);
+
+    if (
+      status === OrderStatus.CANCELLED &&
+      OrdersService.SHIPPED_OR_BEYOND.has(order.status)
+    ) {
+      throw new BadRequestException(
+        'Đơn hàng đã giao/đang giao nên không thể hủy. Vui lòng xử lý hoàn trả thủ công.',
+      );
+    }
+    if (
+      OrdersService.FULFILLMENT_STARTED.has(status) &&
+      order.paymentMethodCode &&
+      OrdersService.PREPAID_METHODS.has(order.paymentMethodCode) &&
+      order.paymentStatus !== PaymentStatus.PAID
+    ) {
+      throw new BadRequestException(
+        'Đơn hàng chưa được xác nhận thanh toán, không thể chuyển sang xử lý/giao.',
+      );
+    }
+
     order.status = status;
     if (status === OrderStatus.CANCELLED) {
       return this.cancelStock(order); // release reserve / restock committed
     }
     if (status === OrderStatus.DELIVERED) {
-      order.paymentStatus = PaymentStatus.PAID; // COD captured on delivery
+      if (order.paymentMethodCode === PaymentMethodCode.COD) {
+        order.paymentStatus = PaymentStatus.PAID; // COD captured on delivery
+      }
       return this.commitStock(order); // reserve → physical deduction
     }
     return this.orders.save(order);
@@ -279,11 +358,11 @@ export class OrdersService {
     return this.commitStock(order); // prepaid captured → physical deduction
   }
 
-  /** Cancel an order and return its stock (release if reserved, restock if committed). */
-  async cancel(id: string): Promise<Order> {
-    const order = await this.findOne(id);
-    order.status = OrderStatus.CANCELLED;
-    return this.cancelStock(order);
+  /** Cancel an order and return its stock (release if reserved, restock if committed).
+   *  Not valid once the order has shipped — the guard lives in {@link updateStatus},
+   *  which this simply delegates to. */
+  cancel(id: string): Promise<Order> {
+    return this.updateStatus(id, OrderStatus.CANCELLED);
   }
 
   /** Statuses a customer may still cancel from (before the order ships out). */
@@ -422,7 +501,24 @@ export class OrdersService {
     );
   }
 
-  private generateOrderCode(): string {
-    return 'DH' + Date.now().toString(36).toUpperCase().slice(-8);
+  /** Fulfillment/payment prefixes so staff can tell an order's shape from its code alone. */
+  private static readonly FULFILLMENT_CODE: Record<FulfillmentType, string> = {
+    [FulfillmentType.DELIVERY]: 'GH',
+    [FulfillmentType.PICKUP]: 'PU',
+  };
+
+  private static readonly PAYMENT_CODE: Record<PaymentMethodCode, string> = {
+    [PaymentMethodCode.COD]: 'COD',
+    [PaymentMethodCode.BANK_TRANSFER]: 'BANK',
+    [PaymentMethodCode.MOMO]: 'MM',
+    [PaymentMethodCode.ATM_CARD]: 'TT',
+  };
+
+  private generateOrderCode(
+    fulfillment: FulfillmentType,
+    paymentMethodCode: PaymentMethodCode,
+  ): string {
+    const suffix = Date.now().toString(36).toUpperCase().slice(-8);
+    return `${OrdersService.FULFILLMENT_CODE[fulfillment]}-${OrdersService.PAYMENT_CODE[paymentMethodCode]}-${suffix}`;
   }
 }

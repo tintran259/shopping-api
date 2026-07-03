@@ -4,10 +4,8 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,11 +19,7 @@ import {
 } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
 import { CheckoutDto, GuestCheckoutDto } from '../dto/checkout.dto';
-import { UpdateOrderStatusDto } from '../dto/update-order-status.dto';
 import { OrdersService } from '../services/orders.service';
 
 @ApiTags('orders')
@@ -81,38 +75,5 @@ export class OrdersController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.orders.cancelForUser(user.id, id);
-  }
-
-  // ── Admin ──────────────────────────────────────────────────────────
-  @Get('admin/all')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] List all orders' })
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.orders.findAll(query);
-  }
-
-  @Patch(':id/status')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Update order fulfilment status' })
-  updateStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateOrderStatusDto,
-  ) {
-    return this.orders.updateStatus(id, dto.status);
-  }
-
-  @Post(':id/confirm-payment')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({
-    summary: '[admin] Confirm payment (gateway webhook stand-in)',
-  })
-  confirmPayment(@Param('id', ParseUUIDPipe) id: string) {
-    return this.orders.confirmPayment(id);
   }
 }

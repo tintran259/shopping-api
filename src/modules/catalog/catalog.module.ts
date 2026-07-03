@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BranchesModule } from '../branches/branches.module';
+import { AdminProductsController } from './controllers/admin-products.controller';
 import { BrandsController } from './controllers/brands.controller';
 import { CategoriesController } from './controllers/categories.controller';
 import { ProductsController } from './controllers/products.controller';
@@ -37,7 +38,12 @@ import { ProductsService } from './services/products.service';
     ]),
     BranchesModule,
   ],
-  controllers: [BrandsController, CategoriesController, ProductsController],
+  controllers: [
+    BrandsController,
+    CategoriesController,
+    ProductsController,
+    AdminProductsController,
+  ],
   providers: [
     BrandsService,
     CategoriesService,

@@ -19,6 +19,9 @@ interface WishlistProduct {
   slug: string;
   name: string;
   thumbnail: { url: string; alt: string };
+  /** Cheapest/only variant — the add-to-cart target when the item pins no
+   *  variant (the cart is variant-keyed, so a line without it can't sync). */
+  defaultVariantId: string | null;
   price: { amount: number; compareAt: number | null; currency: string };
   priceVaries: boolean;
   brand: { id: string; slug: string; name: string } | null;
@@ -47,6 +50,7 @@ function toWishlistProduct(
     slug: product.slug,
     name: product.name,
     thumbnail: variant?.image ?? primary ?? { url: '', alt: product.name },
+    defaultVariantId: product.defaultVariantId,
     price: variant?.price ?? product.price,
     priceVaries: variant ? false : product.priceVaries,
     brand: product.brand,

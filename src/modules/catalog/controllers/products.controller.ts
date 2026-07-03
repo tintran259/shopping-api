@@ -1,28 +1,14 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import {
-  CreateProductDto,
-  ProductQueryDto,
-  UpdateProductDto,
-} from '../dto/product.dto';
+import { ProductQueryDto } from '../dto/product.dto';
 import { ProductsService } from '../services/products.service';
 
+/**
+ * Public storefront catalog. Returns FE-shaped DTOs (thumbnail, price object,
+ * facets). Admin write/raw-read operations live in AdminProductsController
+ * (`/admin/products`).
+ */
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
@@ -49,36 +35,5 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get a product by id — storefront shape' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.products.detailById(id);
-  }
-
-  @Post()
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Create a product (with variants)' })
-  create(@Body() dto: CreateProductDto) {
-    return this.products.create(dto);
-  }
-
-  @Patch(':id')
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Update a product' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateProductDto,
-  ) {
-    return this.products.update(id, dto);
-  }
-
-  @Delete(':id')
-  @HttpCode(204)
-  @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] Delete a product' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.products.remove(id);
   }
 }
