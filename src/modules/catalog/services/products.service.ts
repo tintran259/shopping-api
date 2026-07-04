@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource, QueryFailedError, type EntityManager } from 'typeorm';
+import { ProductStatus } from '../../../common/enums';
 import { PaginatedResult } from '../../../common/dto/paginated-result';
 import {
   CreateProductDto,
@@ -35,6 +36,12 @@ import {
   type ProductDto,
   type ProductSummaryDto,
 } from '../serializers/catalog.serializer';
+
+/** Never publicly browsable/reachable, regardless of what a caller's `status`
+ *  query param says — draft is unfinished, discontinued is retired. Admin
+ *  (`listRaw`/raw `findOne`/`findBySlug`) is exempt: the BO must see every
+ *  status to manage it. */
+const HIDDEN_PUBLIC_STATUSES = [ProductStatus.DRAFT, ProductStatus.DISCONTINUED];
 
 export interface ProductListDto {
   items: ProductSummaryDto[];
@@ -67,7 +74,7 @@ export class ProductsService {
   /** Storefront product list — FE-shaped, with branch stock + facets. */
   async list(query: ProductQueryDto): Promise<ProductListDto> {
     const [[data, total], facets] = await Promise.all([
-      this.products.search(query),
+      this.products.search(query, { excludeStatuses: HIDDEN_PUBLIC_STATUSES }),
       this.buildFacets(query),
     ]);
     const inv = await this.inventoryFor(data);
@@ -99,7 +106,9 @@ export class ProductsService {
     limit = 6,
   ): Promise<{ products: ProductSummaryDto[]; total: number }> {
     const query = { q, limit, page: 1, skip: 0 } as ProductQueryDto;
-    const [data, total] = await this.products.search(query);
+    const [data, total] = await this.products.search(query, {
+      excludeStatuses: HIDDEN_PUBLIC_STATUSES,
+    });
     const inv = await this.inventoryFor(data);
     return { products: data.map((p) => toProductSummary(p, inv)), total };
   }
@@ -172,12 +181,23 @@ export class ProductsService {
   /** Storefront product detail (FE-shaped). */
   async detailBySlug(slug: string): Promise<ProductDto> {
     const product = await this.findBySlug(slug);
+    this.assertPubliclyVisible(product);
     return toProduct(product, await this.inventoryFor([product]));
   }
 
   async detailById(id: string): Promise<ProductDto> {
     const product = await this.findOne(id);
+    this.assertPubliclyVisible(product);
     return toProduct(product, await this.inventoryFor([product]));
+  }
+
+  /** Draft/discontinued must 404 on the public detail routes even by direct
+   *  slug/id — same response as "doesn't exist" so it doesn't leak that a
+   *  hidden product exists. Admin's raw `findOne`/`findBySlug` are untouched. */
+  private assertPubliclyVisible(product: Product): void {
+    if (HIDDEN_PUBLIC_STATUSES.includes(product.status)) {
+      throw new NotFoundException('Product not found');
+    }
   }
 
   async findOne(id: string): Promise<Product> {

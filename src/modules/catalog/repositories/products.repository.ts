@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { ProductStatus } from '../../../common/enums';
 import { ProductQueryDto, parseAttrs } from '../dto/product.dto';
 import { ProductVariant } from '../entities/product-variant.entity';
 import { Product } from '../entities/product.entity';
@@ -65,8 +66,18 @@ export class ProductsRepository {
     });
   }
 
-  /** Filtered + sorted + paginated search → [items, total]. */
-  async search(query: ProductQueryDto): Promise<[Product[], number]> {
+  /**
+   * Filtered + sorted + paginated search → [items, total].
+   *
+   * `excludeStatuses` is how the public storefront path (list/suggest) keeps
+   * draft/discontinued products out regardless of what the calling FE passes
+   * as `query.status` — admin (`listRaw`) never sets it, since the BO must
+   * see every status to manage it.
+   */
+  async search(
+    query: ProductQueryDto,
+    opts?: { excludeStatuses?: ProductStatus[] },
+  ): Promise<[Product[], number]> {
     const qb = this.repo
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
@@ -78,6 +89,11 @@ export class ProductsRepository {
 
     if (query.status) {
       qb.andWhere('product.status = :status', { status: query.status });
+    }
+    if (opts?.excludeStatuses?.length) {
+      qb.andWhere('product.status NOT IN (:...excludedStatuses)', {
+        excludedStatuses: opts.excludeStatuses,
+      });
     }
     if (query.q) {
       qb.andWhere(
