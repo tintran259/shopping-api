@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LocationsModule } from '../locations/locations.module';
+import { AdminCustomersController } from './controllers/admin-customers.controller';
 import { CustomersController } from './controllers/customers.controller';
 import { Address } from './entities/address.entity';
 import { B2bProfile } from './entities/b2b-profile.entity';
@@ -15,7 +16,7 @@ import { CustomersService } from './services/customers.service';
     TypeOrmModule.forFeature([Customer, Address, B2bProfile]),
     LocationsModule,
   ],
-  controllers: [CustomersController],
+  controllers: [CustomersController, AdminCustomersController],
   providers: [
     CustomersService,
     AddressesService,

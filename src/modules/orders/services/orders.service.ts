@@ -10,6 +10,7 @@ import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import {
   FulfillmentType,
   InventoryStatus,
+  OrderChannel,
   OrderStatus,
   OrderStockStatus,
   PaymentMethodCode,
@@ -24,7 +25,12 @@ import { PaymentsService } from '../../payments/services/payments.service';
 import { VouchersService } from '../../vouchers/services/vouchers.service';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
-import { CheckoutDto, GuestCheckoutDto } from '../dto/checkout.dto';
+import {
+  AdminCreateOrderDto,
+  CheckoutDto,
+  CheckoutItemDto,
+  GuestCheckoutDto,
+} from '../dto/checkout.dto';
 import { Order, ShippingAddressSnapshot } from '../entities/order.entity';
 import { OrdersRepository } from '../repositories/orders.repository';
 
@@ -103,8 +109,32 @@ export class OrdersService {
   /** Guest checkout — items come from the request body (no server cart). Prices
    *  and stock are still resolved/validated server-side. */
   async guestCheckout(dto: GuestCheckoutDto): Promise<Order> {
+    const lineItems = await this.resolveLineItems(dto.items);
+    return this.placeOrder({ dto, lineItems, currency: 'VND' });
+  }
+
+  /** Staff-entered order (phone order, walk-in, B2B deal closed offline…) — an
+   *  authenticated admin action, not an anonymous storefront checkout. Kept as
+   *  its own method (sharing the {@link resolveLineItems}/{@link placeOrder}
+   *  core with guest checkout, not the method itself) so admin-only behaviour
+   *  can diverge later without touching the public guest-checkout path. */
+  async adminCreate(dto: AdminCreateOrderDto): Promise<Order> {
+    const lineItems = await this.resolveLineItems(dto.items);
+    return this.placeOrder({
+      dto,
+      lineItems,
+      currency: 'VND',
+      channel: OrderChannel.ADMIN,
+    });
+  }
+
+  /** Resolve body-supplied (variantId, quantity) pairs into priced line items —
+   *  the shared item-resolution step for both guest and staff-entered orders. */
+  private async resolveLineItems(
+    items: CheckoutItemDto[],
+  ): Promise<OrderLineItem[]> {
     const lineItems: OrderLineItem[] = [];
-    for (const it of dto.items) {
+    for (const it of items) {
       const variant = await this.products.getVariantOrFail(it.variantId);
       if (!variant.isActive) {
         throw new BadRequestException('Một sản phẩm không còn khả dụng');
@@ -119,7 +149,7 @@ export class OrdersService {
         imageUrl: lineImageUrl(variant),
       });
     }
-    return this.placeOrder({ dto, lineItems, currency: 'VND' });
+    return lineItems;
   }
 
   /** Shared order-creation core (prices recomputed here = source of truth). */
@@ -129,8 +159,18 @@ export class OrdersService {
     currency: string;
     customerId?: string;
     cartId?: string;
+    /** Who placed the order — defaults to the customer-facing storefront;
+     *  {@link adminCreate} is the only caller that passes ADMIN. */
+    channel?: OrderChannel;
   }): Promise<Order> {
-    const { dto, lineItems, currency, customerId, cartId } = params;
+    const {
+      dto,
+      lineItems,
+      currency,
+      customerId,
+      cartId,
+      channel = OrderChannel.STOREFRONT,
+    } = params;
 
     // Friendly pre-check (the locked reserve below is the race-safe guard, but its
     // error is generic — this names the short items so the FE can tell the user).
@@ -178,6 +218,7 @@ export class OrdersService {
         customerId,
         branchId: dto.branchId,
         fulfillment: dto.fulfillment,
+        channel,
         status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,
         paymentMethodCode: dto.paymentMethodCode,

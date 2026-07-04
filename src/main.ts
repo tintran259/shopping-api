@@ -1,16 +1,25 @@
+import { mkdirSync } from 'fs';
+import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
   const apiPrefix = config.get<string>('apiPrefix') ?? 'api';
   app.setGlobalPrefix(apiPrefix);
+
+  // BO image uploads land here; served OUTSIDE the API prefix so the stored
+  // absolute URLs (http://host/uploads/…) render directly in BO + storefront.
+  const uploadsDir = join(process.cwd(), 'uploads');
+  mkdirSync(uploadsDir, { recursive: true });
+  app.useStaticAssets(uploadsDir, { prefix: '/uploads/' });
 
   const corsOrigins = config.get<string[]>('corsOrigins') ?? [];
   app.enableCors({

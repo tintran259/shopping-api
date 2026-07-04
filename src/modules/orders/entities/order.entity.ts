@@ -10,6 +10,7 @@ import {
 import { BaseEntity } from '../../../common/entities/base.entity';
 import {
   FulfillmentType,
+  OrderChannel,
   OrderStatus,
   OrderStockStatus,
   PaymentMethodCode,
@@ -81,6 +82,18 @@ export class Order extends BaseEntity {
     default: OrderStockStatus.RESERVED,
   })
   stockStatus: OrderStockStatus;
+
+  @ApiProperty({
+    enum: OrderChannel,
+    default: OrderChannel.STOREFRONT,
+    description: 'Where the order was placed from — customer checkout vs staff-entered.',
+  })
+  @Column({
+    type: 'enum',
+    enum: OrderChannel,
+    default: OrderChannel.STOREFRONT,
+  })
+  channel: OrderChannel;
 
   @ApiProperty({ enum: PaymentMethodCode, required: false })
   @Column({ name: 'payment_method_code', type: 'varchar', nullable: true })

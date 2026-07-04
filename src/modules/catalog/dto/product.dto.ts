@@ -41,6 +41,15 @@ export class ProductOptionInput {
 }
 
 export class VariantInput {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Existing variant id (update path only) — omit for a new variant.',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty() @IsString() sku: string;
   @ApiProperty({ example: '199000.00' }) @IsNumberString() price: string;
   @ApiPropertyOptional()

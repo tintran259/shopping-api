@@ -15,6 +15,7 @@ import { CustomerRole } from '../../../common/enums';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
+import { AdminCreateOrderDto } from '../dto/checkout.dto';
 import { UpdateOrderStatusDto } from '../dto/update-order-status.dto';
 import { OrdersService } from '../services/orders.service';
 
@@ -30,6 +31,17 @@ import { OrdersService } from '../services/orders.service';
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly orders: OrdersService) {}
+
+  @Post()
+  @ApiOperation({
+    summary:
+      'Create an order on behalf of a customer/walk-in (staff-entered — phone order, ' +
+      'in-branch pickup sale, B2B deal closed offline). Items are resolved and priced ' +
+      'server-side, same as the storefront, but this is a distinct admin-only path.',
+  })
+  create(@Body() dto: AdminCreateOrderDto) {
+    return this.orders.adminCreate(dto);
+  }
 
   @Get()
   @ApiOperation({

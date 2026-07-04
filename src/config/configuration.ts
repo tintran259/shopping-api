@@ -6,6 +6,8 @@ export default () => ({
   env: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
   apiPrefix: process.env.API_PREFIX ?? 'api',
+  /** Origin for absolute URLs of uploaded files (set to CDN/domain in prod). */
+  publicUrl: process.env.PUBLIC_URL ?? '',
   corsOrigins: (process.env.CORS_ORIGINS ?? '')
     .split(',')
     .map((o) => o.trim())

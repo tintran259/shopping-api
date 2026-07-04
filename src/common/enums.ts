@@ -82,6 +82,13 @@ export enum PaymentMethodCode {
   COD = 'cod',
 }
 
+/** Where an order was placed from — lets the BO tell staff-entered orders
+ *  (phone/walk-in/B2B) apart from ones the customer placed themselves. */
+export enum OrderChannel {
+  STOREFRONT = 'storefront',
+  ADMIN = 'admin',
+}
+
 export enum ShipmentStatus {
   PENDING = 'pending',
   SHIPPED = 'shipped',

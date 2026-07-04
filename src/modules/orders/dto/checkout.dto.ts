@@ -113,3 +113,11 @@ export class GuestCheckoutDto extends CheckoutDto {
   @Type(() => CheckoutItemDto)
   items: CheckoutItemDto[];
 }
+
+/** Staff-entered order (phone order, walk-in, B2B deal closed offline…). Same
+ *  shape as {@link GuestCheckoutDto} today, but kept as its own type — this is
+ *  an authenticated admin action on behalf of a customer, not an anonymous
+ *  storefront checkout, and the two should be free to diverge (e.g. admin
+ *  gaining a `customerId` to attribute the order once the admin customer list
+ *  ships) without touching the public guest-checkout path. */
+export class AdminCreateOrderDto extends GuestCheckoutDto {}
