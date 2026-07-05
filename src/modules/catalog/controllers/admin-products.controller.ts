@@ -47,6 +47,15 @@ export class AdminProductsController {
     return this.products.findOne(id);
   }
 
+  @Get(':id/inventory-summary')
+  @ApiOperation({
+    summary:
+      'Per-branch stock summed across the product\'s variants — powers the status-change confirm dialog',
+  })
+  inventorySummary(@Param('id', ParseUUIDPipe) id: string) {
+    return this.products.inventorySummary(id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a product (with variants)' })
   create(@Body() dto: CreateProductDto) {

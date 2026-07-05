@@ -1,13 +1,29 @@
-import { Injectable } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
-import { InventoryStatus } from '../../../common/enums';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InventoryStatus, ProductStatus } from '../../../common/enums';
+import { ProductVariant } from '../../catalog/entities/product-variant.entity';
 import { UpsertInventoryDto } from '../dto/inventory.dto';
 import { Inventory } from '../entities/inventory.entity';
 import { InventoryRepository } from '../repositories/inventory.repository';
 
+/** A product in either of these states is not sellable — its stock is locked
+ *  at 0 everywhere (see {@link InventoryService.upsert}) until an admin moves
+ *  it out of this status from the product editor. Exported so
+ *  `ProductsService.update` can check the same list before deciding to call
+ *  {@link InventoryService.resetAllForProduct}. */
+export const LOCKED_PRODUCT_STATUSES = [
+  ProductStatus.OUT_OF_STOCK,
+  ProductStatus.DISCONTINUED,
+];
+
 @Injectable()
 export class InventoryService {
-  constructor(private readonly inventory: InventoryRepository) {}
+  constructor(
+    private readonly inventory: InventoryRepository,
+    @InjectRepository(ProductVariant)
+    private readonly variants: Repository<ProductVariant>,
+  ) {}
 
   /** Per-branch availability for a variant — powers the FE `BranchStock[]`. */
   findForVariant(variantId: string): Promise<Inventory[]> {
@@ -32,8 +48,30 @@ export class InventoryService {
    * reset to `in_stock`/`out_of_stock` on a later quantity-only edit. This
    * lives here, not in the FE, so quantity and status can never drift apart
    * regardless of which client calls this endpoint.
+   *
+   * Blocked entirely while the parent product is `out_of_stock`/
+   * `discontinued` — those statuses force every branch to 0 (see
+   * {@link resetAllForProduct}, called from the product update), and letting
+   * a stray PUT re-introduce quantity would silently reopen a product the
+   * admin just took off sale. The admin must change the product's status
+   * first; this is why the message says so instead of just rejecting.
    */
   async upsert(dto: UpsertInventoryDto): Promise<Inventory> {
+    const variant = await this.variants.findOne({
+      where: { id: dto.variantId },
+      relations: { product: true },
+    });
+    if (!variant) throw new NotFoundException('Variant not found');
+    if (LOCKED_PRODUCT_STATUSES.includes(variant.product.status)) {
+      const label =
+        variant.product.status === ProductStatus.DISCONTINUED
+          ? 'Ngừng bán'
+          : 'Hết hàng';
+      throw new BadRequestException(
+        `Sản phẩm đang ở trạng thái "${label}" — đổi trạng thái sản phẩm trước khi chỉnh tồn kho.`,
+      );
+    }
+
     const record =
       (await this.inventory.getRecord(dto.branchId, dto.variantId)) ??
       this.inventory.create({
@@ -48,6 +86,22 @@ export class InventoryService {
         dto.quantity > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK;
     }
     return this.inventory.save(record);
+  }
+
+  /**
+   * Force every branch's stock for a product to 0/out_of_stock — called when
+   * a product's status is set to `out_of_stock`/`discontinued` (see
+   * `ProductsService.update`). Goes straight to the repository (bypasses
+   * {@link upsert}'s guard above on purpose: this IS the transition that
+   * puts the lock in place, not a request subject to it).
+   */
+  async resetAllForProduct(productId: string): Promise<void> {
+    const variants = await this.variants.find({
+      where: { productId },
+      select: ['id'],
+    });
+    if (!variants.length) return;
+    await this.inventory.resetForVariants(variants.map((v) => v.id));
   }
 
   /** Hold stock at order placement (available = quantity − reserved). */

@@ -25,7 +25,11 @@ import { ProductVariant } from '../entities/product-variant.entity';
 import { Product } from '../entities/product.entity';
 import { CategoriesRepository } from '../repositories/categories.repository';
 import { ProductsRepository } from '../repositories/products.repository';
-import { InventoryService } from '../../branches/services/inventory.service';
+import {
+  InventoryService,
+  LOCKED_PRODUCT_STATUSES,
+} from '../../branches/services/inventory.service';
+import { BranchesService } from '../../branches/services/branches.service';
 import {
   indexInventory,
   toProduct,
@@ -60,6 +64,7 @@ export class ProductsService {
     private readonly products: ProductsRepository,
     private readonly categories: CategoriesRepository,
     private readonly inventory: InventoryService,
+    private readonly branches: BranchesService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -300,7 +305,45 @@ export class ProductsService {
       }
     });
 
+    // Taking a product off sale must not leave stale stock lying around that
+    // display logic elsewhere reads as "available" — force every branch back
+    // to 0/out_of_stock. The BO shows a confirm dialog with today's per-branch
+    // quantities before letting the admin pick either status (see
+    // `inventorySummary` below); this is what actually carries it out.
+    if (dto.status && LOCKED_PRODUCT_STATUSES.includes(dto.status)) {
+      await this.inventory.resetAllForProduct(id);
+    }
+
     return this.findOne(id);
+  }
+
+  /** Per-branch stock summed across every variant of a product — powers the
+   *  confirm dialog shown before switching a product to out_of_stock/
+   *  discontinued (see {@link update}), so the admin sees what's about to be
+   *  zeroed instead of finding out after the fact. Branch name is joined here
+   *  (not left to the FE) so that dialog doesn't need its own branch lookup. */
+  async inventorySummary(id: string): Promise<
+    { branchId: string; branchName: string; quantity: number; reserved: number }[]
+  > {
+    const product = await this.findOne(id);
+    const variantIds = (product.variants ?? []).map((v) => v.id);
+    const [rows, allBranches] = await Promise.all([
+      this.inventory.findForVariants(variantIds),
+      this.branches.findAll(),
+    ]);
+    const branchName = new Map(allBranches.map((b) => [b.id, b.name]));
+    const byBranch = new Map<string, { quantity: number; reserved: number }>();
+    for (const r of rows) {
+      const entry = byBranch.get(r.branchId) ?? { quantity: 0, reserved: 0 };
+      entry.quantity += r.quantity;
+      entry.reserved += r.reserved;
+      byBranch.set(r.branchId, entry);
+    }
+    return [...byBranch.entries()].map(([branchId, v]) => ({
+      branchId,
+      branchName: branchName.get(branchId) ?? branchId,
+      ...v,
+    }));
   }
 
   async remove(id: string): Promise<void> {

@@ -37,6 +37,20 @@ export class InventoryRepository {
     return this.repo.findOne({ where: { branchId, variantId } });
   }
 
+  /** Bulk zero-out physical stock — only existing rows (unassigned branches
+   *  have none to reset; they're already implicitly 0). Deliberately leaves
+   *  `reserved` untouched: it tracks real unfulfilled orders placed before
+   *  the product was taken off sale, and zeroing it here would desync the
+   *  reserve→commit/release accounting for those orders. See
+   *  {@link InventoryService.resetAllForProduct}. */
+  async resetForVariants(variantIds: string[]): Promise<void> {
+    if (!variantIds.length) return;
+    await this.repo.update(
+      { variantId: In(variantIds) },
+      { quantity: 0, status: InventoryStatus.OUT_OF_STOCK },
+    );
+  }
+
   /** Lock the (branch, variant) row inside an existing transaction. */
   private async lockRecord(
     manager: EntityManager,
