@@ -1,7 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinTable, ManyToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { VoucherType } from '../../../common/enums';
+import { VoucherCustomerScope, VoucherType } from '../../../common/enums';
+import { Branch } from '../../branches/entities/branch.entity';
+import { Product } from '../../catalog/entities/product.entity';
+import { Customer } from '../../customers/entities/customer.entity';
 
 @Entity('vouchers')
 export class Voucher extends BaseEntity {
@@ -61,4 +64,48 @@ export class Voucher extends BaseEntity {
   @ApiProperty({ default: true })
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
+
+  /** Empty = no restriction (applies to every product/branch/customer) — a
+   *  voucher only narrows once rows exist here, see `VouchersService.evaluate`.
+   *  "Group" is just "more than one row" — there's no separate reusable
+   *  group entity, the admin picks the exact set per voucher. */
+  @ApiProperty({ type: () => [Product], required: false })
+  @ManyToMany(() => Product)
+  @JoinTable({
+    name: 'voucher_products',
+    joinColumn: { name: 'voucher_id' },
+    inverseJoinColumn: { name: 'product_id' },
+  })
+  products?: Product[];
+
+  @ApiProperty({ type: () => [Branch], required: false })
+  @ManyToMany(() => Branch)
+  @JoinTable({
+    name: 'voucher_branches',
+    joinColumn: { name: 'voucher_id' },
+    inverseJoinColumn: { name: 'branch_id' },
+  })
+  branches?: Branch[];
+
+  /** SPECIFIC + empty `customers` = unrestricted (today's default: anyone,
+   *  guest or account). SPECIFIC + non-empty = only those accounts.
+   *  GUESTS/USERS ignore `customers` and gate purely on whether the order
+   *  has a customerId — see `VouchersService.evaluate`. */
+  @ApiProperty({ enum: VoucherCustomerScope, default: VoucherCustomerScope.SPECIFIC })
+  @Column({
+    name: 'customer_scope',
+    type: 'enum',
+    enum: VoucherCustomerScope,
+    default: VoucherCustomerScope.SPECIFIC,
+  })
+  customerScope: VoucherCustomerScope;
+
+  @ApiProperty({ type: () => [Customer], required: false })
+  @ManyToMany(() => Customer)
+  @JoinTable({
+    name: 'voucher_customers',
+    joinColumn: { name: 'voucher_id' },
+    inverseJoinColumn: { name: 'customer_id' },
+  })
+  customers?: Customer[];
 }

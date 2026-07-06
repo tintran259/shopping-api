@@ -37,6 +37,7 @@ import { OrdersRepository } from '../repositories/orders.repository';
 /** A resolved order line ready to persist (price/name pulled server-side). */
 interface OrderLineItem {
   variantId: string;
+  productId: string;
   productName: string;
   variantTitle: string;
   sku: string;
@@ -89,6 +90,7 @@ export class OrdersService {
 
     const lineItems: OrderLineItem[] = cart.items.map((i) => ({
       variantId: i.variantId,
+      productId: i.variant?.productId ?? '',
       productName: i.variant?.product?.name ?? i.variant?.sku ?? 'Item',
       variantTitle: variantLabel(i.variant),
       sku: i.variant?.sku ?? '',
@@ -141,6 +143,7 @@ export class OrdersService {
       }
       lineItems.push({
         variantId: variant.id,
+        productId: variant.productId,
         productName: variant.product?.name ?? variant.sku,
         variantTitle: variantLabel(variant),
         sku: variant.sku,
@@ -194,6 +197,11 @@ export class OrdersService {
         dto.voucherCode,
         subtotal,
         shippingFee,
+        {
+          branchId: dto.branchId,
+          customerId,
+          productIds: lineItems.map((i) => i.productId),
+        },
       );
       discount = evaluation.discount;
       voucherId = evaluation.voucher.id;
@@ -456,7 +464,8 @@ export class OrdersService {
   }
 
   /** Return stock on cancel: release the hold (if still reserved) or restock
-   *  (if already committed). Idempotent (no-op once released). */
+   *  (if already committed). Idempotent (no-op once released). Also reverses any
+   *  voucher redemption tied to this order, freeing its usage slot back up. */
   private cancelStock(order: Order): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
       if (order.stockStatus === OrderStockStatus.RESERVED) {
@@ -480,6 +489,7 @@ export class OrdersService {
         }
         order.stockStatus = OrderStockStatus.RELEASED;
       }
+      await this.vouchers.unredeem(manager, order.id);
       return manager.getRepository(Order).save(order);
     });
   }

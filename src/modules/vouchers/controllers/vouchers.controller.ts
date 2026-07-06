@@ -19,10 +19,24 @@ import {
 } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
+import { CustomerRole, VoucherCustomerScope } from '../../../common/enums';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AdminVoucherQueryDto } from '../dto/admin-voucher-query.dto';
 import { CreateVoucherDto, UpdateVoucherDto } from '../dto/voucher.dto';
+import { Voucher } from '../entities/voucher.entity';
 import { VouchersService } from '../services/vouchers.service';
+
+/** Needs a logged-in session: `users` (any account) or `specific` with a non-empty list. */
+function requiresCustomer(v: Voucher): boolean {
+  if (v.customerScope === VoucherCustomerScope.USERS) return true;
+  if (v.customerScope === VoucherCustomerScope.SPECIFIC) return (v.customers?.length ?? 0) > 0;
+  return false;
+}
+
+/** Only for guests — a logged-in user must not apply this voucher. */
+function guestsOnly(v: Voucher): boolean {
+  return v.customerScope === VoucherCustomerScope.GUESTS;
+}
 
 @ApiTags('vouchers')
 @Controller('vouchers')
@@ -30,31 +44,97 @@ export class VouchersController {
   constructor(private readonly vouchers: VouchersService) {}
 
   @Public()
+  @Get('available')
+  @ApiOperation({ summary: 'List active vouchers for the storefront picker. Pass customerId to include vouchers assigned to that customer.' })
+  @ApiQuery({ name: 'customerId', required: false })
+  async listAvailable(@Query('customerId') customerId?: string) {
+    const vouchers = await this.vouchers.listAvailable(customerId);
+    return vouchers.map((v) => ({
+      code: v.code,
+      type: v.type,
+      value: Number(v.value),
+      minSubtotal: Number(v.minSubtotal),
+      maxDiscount: v.maxDiscount != null ? Number(v.maxDiscount) : undefined,
+      endsAt: v.endsAt?.toISOString(),
+      applicableProducts: v.products?.length
+        ? v.products.map((p) => ({ id: p.id, slug: p.slug, name: p.name }))
+        : undefined,
+      applicableBranches: v.branches?.length
+        ? v.branches.map((b) => ({ id: b.id, name: b.name }))
+        : undefined,
+      requiresCustomer: requiresCustomer(v),
+      guestsOnly: guestsOnly(v),
+    }));
+  }
+
+  @Public()
   @Get('validate')
-  @ApiOperation({ summary: 'Validate a voucher against a subtotal' })
+  @ApiOperation({ summary: 'Validate a voucher against a subtotal + cart/branch/customer scoping' })
   @ApiQuery({ name: 'code', required: true })
   @ApiQuery({ name: 'subtotal', required: true, type: Number })
   @ApiQuery({ name: 'shippingFee', required: false, type: Number })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'customerId', required: false })
+  @ApiQuery({ name: 'productIds', required: false, description: 'Comma-separated product ids in the cart' })
   async validate(
     @Query('code') code: string,
     @Query('subtotal') subtotal: string,
     @Query('shippingFee') shippingFee?: string,
+    @Query('branchId') branchId?: string,
+    @Query('customerId') customerId?: string,
+    @Query('productIds') productIds?: string,
   ) {
     const { voucher, discount } = await this.vouchers.evaluate(
       code,
       Number(subtotal),
       Number(shippingFee ?? 0),
+      { branchId, customerId, productIds: productIds?.split(',').filter(Boolean) },
     );
-    return { valid: true, code: voucher.code, type: voucher.type, discount };
+    return {
+      valid: true,
+      code: voucher.code,
+      type: voucher.type,
+      value: Number(voucher.value),
+      minSubtotal: Number(voucher.minSubtotal),
+      maxDiscount: voucher.maxDiscount != null ? Number(voucher.maxDiscount) : undefined,
+      endsAt: voucher.endsAt?.toISOString(),
+      applicableProducts: voucher.products?.length
+        ? voucher.products.map((p) => ({ id: p.id, slug: p.slug, name: p.name }))
+        : undefined,
+      applicableBranches: voucher.branches?.length
+        ? voucher.branches.map((b) => ({ id: b.id, name: b.name }))
+        : undefined,
+      requiresCustomer: requiresCustomer(voucher),
+      guestsOnly: guestsOnly(voucher),
+      discount,
+    };
   }
 
   @Get()
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(CustomerRole.ADMIN)
-  @ApiOperation({ summary: '[admin] List vouchers' })
-  findAll() {
-    return this.vouchers.findAll();
+  @ApiOperation({ summary: '[admin] List vouchers — paginated, filterable by q/state' })
+  findAll(@Query() query: AdminVoucherQueryDto) {
+    return this.vouchers.findAllPaginated(query);
+  }
+
+  @Get('stats')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(CustomerRole.ADMIN)
+  @ApiOperation({ summary: '[admin] Voucher counts by state, for the list page stat cards' })
+  stats() {
+    return this.vouchers.stateCounts();
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(CustomerRole.ADMIN)
+  @ApiOperation({ summary: '[admin] Get a voucher by id (incl. scoping relations)' })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vouchers.findOne(id);
   }
 
   @Post()

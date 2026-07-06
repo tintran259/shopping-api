@@ -101,6 +101,17 @@ export enum VoucherType {
   SHIPPING = 'shipping',
 }
 
+/** Who a voucher's customer-facing restriction applies to. `SPECIFIC` with
+ *  an empty customers list = no restriction at all (today's default —
+ *  anyone, guest or account, can use it); a non-empty list narrows it to
+ *  just those accounts. `GUESTS`/`USERS` ignore the specific-customers list
+ *  entirely and gate purely on whether the order has a customerId. */
+export enum VoucherCustomerScope {
+  SPECIFIC = 'specific',
+  GUESTS = 'guests',
+  USERS = 'users',
+}
+
 export enum ReviewStatus {
   PENDING = 'pending',
   PUBLISHED = 'published',
