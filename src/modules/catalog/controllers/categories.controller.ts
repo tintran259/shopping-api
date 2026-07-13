@@ -16,7 +16,11 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { CustomerRole } from '../../../common/enums';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { CategoriesService } from '../services/categories.service';
-import { CreateCategoryDto, UpdateCategoryDto } from '../dto/category.dto';
+import {
+  CreateCategoryDto,
+  ReorderCategoriesDto,
+  UpdateCategoryDto,
+} from '../dto/category.dto';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -44,6 +48,17 @@ export class CategoriesController {
   @ApiOperation({ summary: '[admin] Create a category' })
   create(@Body() dto: CreateCategoryDto) {
     return this.categories.create(dto);
+  }
+
+  @Patch('reorder')
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(CustomerRole.ADMIN)
+  @ApiOperation({
+    summary: '[admin] Bulk sortOrder update for a drag-and-drop reorder',
+  })
+  reorder(@Body() dto: ReorderCategoriesDto) {
+    return this.categories.reorder(dto);
   }
 
   @Patch(':id')

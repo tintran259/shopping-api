@@ -86,7 +86,8 @@ export class Order extends BaseEntity {
   @ApiProperty({
     enum: OrderChannel,
     default: OrderChannel.STOREFRONT,
-    description: 'Where the order was placed from — customer checkout vs staff-entered.',
+    description:
+      'Where the order was placed from — customer checkout vs staff-entered.',
   })
   @Column({
     type: 'enum',
@@ -168,4 +169,8 @@ export class Order extends BaseEntity {
     eager: true,
   })
   items: OrderItem[];
+
+  /** Virtual — populated by admin list query (LEFT JOIN shipments).
+   *  Not persisted; null when no shipment exists yet. */
+  shipmentStatus?: string | null;
 }

@@ -63,7 +63,9 @@ export class VouchersRepository {
    *  `loadRelationCountAndMap` (a scalar subquery) instead of joining the
    *  scoping relations, so pagination counts stay correct no matter how many
    *  products/branches/customers a voucher has attached. */
-  async searchAdmin(query: AdminVoucherQueryDto): Promise<[VoucherListRow[], number]> {
+  async searchAdmin(
+    query: AdminVoucherQueryDto,
+  ): Promise<[VoucherListRow[], number]> {
     const qb = this.vouchers
       .createQueryBuilder('v')
       .loadRelationCountAndMap('v.productsCount', 'v.products')
@@ -109,7 +111,8 @@ export class VouchersRepository {
    *  `state` precedence as `searchAdmin`'s filter) so it reflects every
    *  voucher, not just whatever page happens to be loaded client-side. */
   async countByState(): Promise<VoucherStateCounts> {
-    const rows: { state: VoucherState; count: string }[] = await this.vouchers.query(`
+    const rows: { state: VoucherState; count: string }[] = await this.vouchers
+      .query(`
       SELECT
         CASE
           WHEN NOT is_active THEN 'disabled'
@@ -187,14 +190,20 @@ export class VouchersRepository {
   }
 
   findByCode(code: string): Promise<Voucher | null> {
-    return this.vouchers.findOne({ where: { code }, relations: SCOPE_RELATIONS });
+    return this.vouchers.findOne({
+      where: { code },
+      relations: SCOPE_RELATIONS,
+    });
   }
 
   /** How many times this customer has already redeemed this voucher — checked
    *  against `perCustomerLimit` in `VouchersService.evaluate`. Guests have no
    *  stable identity to count against, so this is only ever called with a
    *  real customerId. */
-  countRedemptionsByCustomer(voucherId: string, customerId: string): Promise<number> {
+  countRedemptionsByCustomer(
+    voucherId: string,
+    customerId: string,
+  ): Promise<number> {
     return this.redemptions.count({ where: { voucherId, customerId } });
   }
 

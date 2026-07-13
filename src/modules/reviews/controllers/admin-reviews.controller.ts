@@ -27,7 +27,9 @@ export class AdminReviewsController {
   constructor(private readonly reviews: ReviewsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List reviews — filter by status, search (q), paginated' })
+  @ApiOperation({
+    summary: 'List reviews — filter by status, search (q), paginated',
+  })
   findAll(@Query() query: AdminReviewQueryDto) {
     return this.reviews.findAllAdmin(query);
   }

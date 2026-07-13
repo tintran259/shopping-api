@@ -45,7 +45,10 @@ import {
  *  query param says — draft is unfinished, discontinued is retired. Admin
  *  (`listRaw`/raw `findOne`/`findBySlug`) is exempt: the BO must see every
  *  status to manage it. */
-const HIDDEN_PUBLIC_STATUSES = [ProductStatus.DRAFT, ProductStatus.DISCONTINUED];
+const HIDDEN_PUBLIC_STATUSES = [
+  ProductStatus.DRAFT,
+  ProductStatus.DISCONTINUED,
+];
 
 export interface ProductListDto {
   items: ProductSummaryDto[];
@@ -264,6 +267,7 @@ export class ProductsService {
             price: v.price,
             compareAtPrice: v.compareAtPrice,
             imageUrl: v.imageUrl,
+            weightGram: v.weightGram,
             optionValues: this.resolveOptionValues(lookup, v.optionValues),
           }),
         );
@@ -323,7 +327,12 @@ export class ProductsService {
    *  zeroed instead of finding out after the fact. Branch name is joined here
    *  (not left to the FE) so that dialog doesn't need its own branch lookup. */
   async inventorySummary(id: string): Promise<
-    { branchId: string; branchName: string; quantity: number; reserved: number }[]
+    {
+      branchId: string;
+      branchName: string;
+      quantity: number;
+      reserved: number;
+    }[]
   > {
     const product = await this.findOne(id);
     const variantIds = (product.variants ?? []).map((v) => v.id);
@@ -488,6 +497,7 @@ export class ProductsService {
             price: v.price,
             compareAtPrice: v.compareAtPrice,
             imageUrl: v.imageUrl,
+            weightGram: v.weightGram,
             optionValues,
           });
         }
@@ -497,6 +507,7 @@ export class ProductsService {
           price: v.price,
           compareAtPrice: v.compareAtPrice,
           imageUrl: v.imageUrl,
+          weightGram: v.weightGram,
           optionValues,
         });
       });

@@ -10,7 +10,10 @@ import { VoucherCustomerScope, VoucherType } from '../../../common/enums';
 import { Branch } from '../../branches/entities/branch.entity';
 import { Product } from '../../catalog/entities/product.entity';
 import { Customer } from '../../customers/entities/customer.entity';
-import { AdminVoucherQueryDto, VoucherStateCounts } from '../dto/admin-voucher-query.dto';
+import {
+  AdminVoucherQueryDto,
+  VoucherStateCounts,
+} from '../dto/admin-voucher-query.dto';
 import { CreateVoucherDto, UpdateVoucherDto } from '../dto/voucher.dto';
 import { Voucher } from '../entities/voucher.entity';
 import { VouchersRepository } from '../repositories/vouchers.repository';
@@ -25,7 +28,10 @@ export interface VoucherEvaluation {
 export interface VoucherContext {
   branchId?: string;
   customerId?: string;
-  productIds?: string[];
+  productSlugs?: string[];
+  /** Chosen home-delivery method (standard/express) — checked against a
+   *  shipping voucher's `shippingMethods` restriction. */
+  shippingMethod?: string;
 }
 
 @Injectable()
@@ -36,7 +42,9 @@ export class VouchersService {
     return this.vouchers.findAll();
   }
 
-  async findAllPaginated(query: AdminVoucherQueryDto): Promise<PaginatedResult<Voucher>> {
+  async findAllPaginated(
+    query: AdminVoucherQueryDto,
+  ): Promise<PaginatedResult<Voucher>> {
     const [data, total] = await this.vouchers.searchAdmin(query);
     return new PaginatedResult(data, total, query.page, query.limit);
   }
@@ -67,7 +75,9 @@ export class VouchersService {
         error instanceof QueryFailedError &&
         (error.driverError as { code?: string })?.code === '23505'
       ) {
-        throw new ConflictException('Mã giảm giá này đã tồn tại — vui lòng chọn mã khác.');
+        throw new ConflictException(
+          'Mã giảm giá này đã tồn tại — vui lòng chọn mã khác.',
+        );
       }
       throw error;
     }
@@ -76,7 +86,9 @@ export class VouchersService {
   async create(dto: CreateVoucherDto): Promise<Voucher> {
     const code = dto.code.toUpperCase().trim();
     if (await this.vouchers.findByCode(code)) {
-      throw new ConflictException('Mã giảm giá này đã tồn tại — vui lòng chọn mã khác.');
+      throw new ConflictException(
+        'Mã giảm giá này đã tồn tại — vui lòng chọn mã khác.',
+      );
     }
     const { productIds, branchIds, customerIds, ...rest } = dto;
     return this.saveOrThrowConflict(
@@ -163,35 +175,76 @@ export class VouchersService {
     }
     if (
       voucher.branches?.length &&
-      !(context.branchId && voucher.branches.some((b) => b.id === context.branchId))
+      !(
+        context.branchId &&
+        voucher.branches.some((b) => b.id === context.branchId)
+      )
     ) {
       throw new BadRequestException('Mã không áp dụng cho chi nhánh này');
     }
-    if (voucher.customerScope === VoucherCustomerScope.GUESTS && context.customerId) {
-      throw new BadRequestException('Mã chỉ áp dụng cho khách vãng lai (không đăng nhập)');
+    if (
+      voucher.customerScope === VoucherCustomerScope.GUESTS &&
+      context.customerId
+    ) {
+      throw new BadRequestException(
+        'Mã chỉ áp dụng cho khách vãng lai (không đăng nhập)',
+      );
     }
-    if (voucher.customerScope === VoucherCustomerScope.USERS && !context.customerId) {
+    if (
+      voucher.customerScope === VoucherCustomerScope.USERS &&
+      !context.customerId
+    ) {
       throw new BadRequestException('Mã chỉ áp dụng cho khách đã đăng nhập');
     }
     if (
       voucher.customerScope === VoucherCustomerScope.SPECIFIC &&
       voucher.customers?.length &&
-      !(context.customerId && voucher.customers.some((c) => c.id === context.customerId))
+      !(
+        context.customerId &&
+        voucher.customers.some((c) => c.id === context.customerId)
+      )
     ) {
       throw new BadRequestException('Mã không áp dụng cho tài khoản này');
     }
     if (
       voucher.products?.length &&
-      !(context.productIds ?? []).some((pid) =>
-        voucher.products!.some((p) => p.id === pid),
+      !(context.productSlugs ?? []).some((slug) =>
+        voucher.products!.some((p) => p.slug === slug),
       )
     ) {
-      throw new BadRequestException('Mã không áp dụng cho sản phẩm trong giỏ hàng');
+      throw new BadRequestException(
+        'Mã không áp dụng cho sản phẩm trong giỏ hàng',
+      );
+    }
+    // Shipping voucher restricted to specific methods: reject only once a
+    // method is actually chosen and it isn't one of them. Fail OPEN when no
+    // method is in context (unlike the other dimensions) — the method is only
+    // known at checkout, not when applying the code in the cart, so we defer
+    // the check rather than block applying it there; placeOrder always sends
+    // the chosen method so real orders are still enforced.
+    if (
+      voucher.type === VoucherType.SHIPPING &&
+      voucher.shippingMethods?.length &&
+      context.shippingMethod &&
+      !voucher.shippingMethods.includes(
+        context.shippingMethod as (typeof voucher.shippingMethods)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        'Mã không áp dụng cho phương thức vận chuyển này',
+      );
     }
 
     let discount: number;
     if (voucher.type === VoucherType.SHIPPING) {
-      discount = Math.min(Number(voucher.value), shippingFee);
+      // `value === 0` means "miễn phí toàn bộ phí ship" (100%, bất kể phí là
+      // bao nhiêu); a positive value caps the waiver at that amount (giảm tối
+      // đa X đ vào phí ship). Combined with `minSubtotal` (0 = không yêu cầu
+      // đơn tối thiểu) this covers free-ship-with-min and free-ship-any.
+      discount =
+        Number(voucher.value) === 0
+          ? shippingFee
+          : Math.min(Number(voucher.value), shippingFee);
     } else if (voucher.type === VoucherType.PERCENT) {
       discount = (subtotal * Number(voucher.value)) / 100;
       if (voucher.maxDiscount != null) {

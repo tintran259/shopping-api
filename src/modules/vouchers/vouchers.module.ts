@@ -15,7 +15,13 @@ import { VouchersService } from './services/vouchers.service';
   // CatalogModule/BranchesModule/CustomersModule would risk circularity
   // since OrdersModule already imports VouchersModule.
   imports: [
-    TypeOrmModule.forFeature([Voucher, VoucherRedemption, Product, Branch, Customer]),
+    TypeOrmModule.forFeature([
+      Voucher,
+      VoucherRedemption,
+      Product,
+      Branch,
+      Customer,
+    ]),
   ],
   controllers: [VouchersController],
   providers: [VouchersService, VouchersRepository],

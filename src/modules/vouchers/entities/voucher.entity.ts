@@ -1,7 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Column, Entity, Index, JoinTable, ManyToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { VoucherCustomerScope, VoucherType } from '../../../common/enums';
+import {
+  ShippingMethodCode,
+  VoucherCustomerScope,
+  VoucherType,
+} from '../../../common/enums';
 import { Branch } from '../../branches/entities/branch.entity';
 import { Product } from '../../catalog/entities/product.entity';
 import { Customer } from '../../customers/entities/customer.entity';
@@ -91,7 +95,10 @@ export class Voucher extends BaseEntity {
    *  guest or account). SPECIFIC + non-empty = only those accounts.
    *  GUESTS/USERS ignore `customers` and gate purely on whether the order
    *  has a customerId — see `VouchersService.evaluate`. */
-  @ApiProperty({ enum: VoucherCustomerScope, default: VoucherCustomerScope.SPECIFIC })
+  @ApiProperty({
+    enum: VoucherCustomerScope,
+    default: VoucherCustomerScope.SPECIFIC,
+  })
   @Column({
     name: 'customer_scope',
     type: 'enum',
@@ -108,4 +115,16 @@ export class Voucher extends BaseEntity {
     inverseJoinColumn: { name: 'customer_id' },
   })
   customers?: Customer[];
+
+  /** Only meaningful for `shipping` vouchers: which home-delivery methods it
+   *  applies to. Empty = every method (tiêu chuẩn + nhanh). A non-empty list
+   *  narrows it (e.g. `['express']` = only "Giao nhanh"). Enforced in
+   *  `VouchersService.evaluate` against the order's chosen method. */
+  @ApiProperty({ enum: ShippingMethodCode, isArray: true })
+  @Column({
+    name: 'shipping_methods',
+    type: 'simple-array',
+    default: '',
+  })
+  shippingMethods: ShippingMethodCode[];
 }

@@ -59,6 +59,15 @@ export class VariantInput {
   @ApiPropertyOptional() @IsOptional() @IsString() imageUrl?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Used to compute total shipment weight for carrier APIs (e.g. GHN)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  weightGram?: number;
+
+  @ApiPropertyOptional({
     type: 'object',
     additionalProperties: { type: 'string' },
     description:

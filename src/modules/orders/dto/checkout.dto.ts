@@ -13,7 +13,11 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { FulfillmentType, PaymentMethodCode } from '../../../common/enums';
+import {
+  FulfillmentType,
+  PaymentMethodCode,
+  ShippingMethodCode,
+} from '../../../common/enums';
 
 export class ShippingAddressDto {
   @ApiProperty() @IsString() recipientName: string;
@@ -76,6 +80,15 @@ export class CheckoutDto {
   @IsOptional()
   @IsNumberString()
   shippingFee?: string;
+
+  @ApiPropertyOptional({
+    enum: ShippingMethodCode,
+    description:
+      'Chosen home-delivery method — lets a method-restricted shipping voucher validate correctly',
+  })
+  @IsOptional()
+  @IsEnum(ShippingMethodCode)
+  shippingMethod?: ShippingMethodCode;
 
   @ApiPropertyOptional({ type: InvoiceDto, description: 'VAT invoice (B2B)' })
   @IsOptional()

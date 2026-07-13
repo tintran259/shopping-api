@@ -9,7 +9,8 @@ export const ADMIN_CUSTOMER_SORT_FIELDS = [
   'email',
   'lastName',
 ] as const;
-export type AdminCustomerSortField = (typeof ADMIN_CUSTOMER_SORT_FIELDS)[number];
+export type AdminCustomerSortField =
+  (typeof ADMIN_CUSTOMER_SORT_FIELDS)[number];
 
 export class AdminCustomerQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: CustomerType })
@@ -22,7 +23,10 @@ export class AdminCustomerQueryDto extends PaginationQueryDto {
   @IsEnum(CustomerStatus)
   status?: CustomerStatus;
 
-  @ApiPropertyOptional({ enum: ADMIN_CUSTOMER_SORT_FIELDS, default: 'createdAt' })
+  @ApiPropertyOptional({
+    enum: ADMIN_CUSTOMER_SORT_FIELDS,
+    default: 'createdAt',
+  })
   @IsOptional()
   @IsIn(ADMIN_CUSTOMER_SORT_FIELDS as unknown as string[])
   sortBy?: AdminCustomerSortField;

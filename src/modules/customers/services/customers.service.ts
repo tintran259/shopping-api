@@ -6,7 +6,11 @@ import {
 import * as bcrypt from 'bcrypt';
 import { DataSource, QueryFailedError } from 'typeorm';
 import { PaginatedResult } from '../../../common/dto/paginated-result';
-import { CustomerRole, CustomerStatus, CustomerType } from '../../../common/enums';
+import {
+  CustomerRole,
+  CustomerStatus,
+  CustomerType,
+} from '../../../common/enums';
 import { AdminCustomerQueryDto } from '../dto/admin-customer-query.dto';
 import { CreateB2bCustomerDto } from '../dto/create-b2b-customer.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
@@ -136,7 +140,9 @@ export class CustomersService {
         error instanceof QueryFailedError &&
         (error.driverError as { code?: string })?.code === '23505'
       ) {
-        throw new ConflictException('Email đã được đăng ký cho tài khoản khác.');
+        throw new ConflictException(
+          'Email đã được đăng ký cho tài khoản khác.',
+        );
       }
       throw error;
     }

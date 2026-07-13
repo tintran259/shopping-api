@@ -44,7 +44,8 @@ export class ReviewsRepository {
       .skip(query.skip)
       .take(query.limit);
 
-    if (query.status) qb.andWhere('review.status = :status', { status: query.status });
+    if (query.status)
+      qb.andWhere('review.status = :status', { status: query.status });
     if (query.q) {
       qb.andWhere(
         '(unaccent(product.name) ILIKE unaccent(:q) OR unaccent(review.title) ILIKE unaccent(:q) OR unaccent(review.body) ILIKE unaccent(:q))',

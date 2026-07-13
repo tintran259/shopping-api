@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CustomerRole, CustomerStatus, CustomerType } from '../../../common/enums';
+import {
+  CustomerRole,
+  CustomerStatus,
+  CustomerType,
+} from '../../../common/enums';
 import { Customer } from '../entities/customer.entity';
 
 /** Owns all DB access for customers. Services depend on this, never on TypeORM. */

@@ -20,7 +20,9 @@ export class ReviewsService {
     );
   }
 
-  async findAllAdmin(query: AdminReviewQueryDto): Promise<PaginatedResult<Review>> {
+  async findAllAdmin(
+    query: AdminReviewQueryDto,
+  ): Promise<PaginatedResult<Review>> {
     const [data, total] = await this.reviews.searchAdmin(query);
     return new PaginatedResult(data, total, query.page, query.limit);
   }

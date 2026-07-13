@@ -106,7 +106,7 @@ export class Product extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   seo?: Record<string, unknown>;
 
-  @ManyToMany(() => Category)
+  @ManyToMany(() => Category, (c) => c.products)
   @JoinTable({
     name: 'product_categories',
     joinColumn: { name: 'product_id' },

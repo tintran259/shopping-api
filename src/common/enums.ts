@@ -90,9 +90,21 @@ export enum OrderChannel {
 }
 
 export enum ShipmentStatus {
-  PENDING = 'pending',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
+  PENDING = 'pending', // chờ lấy hàng
+  SHIPPED = 'shipped', // đã lấy hàng (carrier picked up / at first hub)
+  IN_TRANSIT = 'in_transit', // đang vận chuyển
+  DELIVERED = 'delivered', // đã giao
+  /** Giao không thành công / hàng hoàn về người gửi. A terminal-ish shipment
+   *  outcome (distinct from the order's own status) that the admin resolves
+   *  by either re-shipping (order back to PROCESSING) or cancelling. */
+  RETURNED = 'returned',
+  /** Sự cố SAU khi đã giao cho ĐVVC: hàng hư hỏng/mất/hoàn thất bại trong quá
+   *  trình vận chuyển — hàng đang ở phía carrier, cần admin xử lý. */
+  PROBLEM = 'problem',
+  /** Sự cố TRƯỚC khi giao cho ĐVVC: carrier không lấy được hàng — hàng chưa
+   *  rời kho. Tách riêng khỏi PROBLEM để timeline không hiển thị các bước vận
+   *  chuyển (chưa từng xảy ra); admin giao lại (dễ, hàng còn) hoặc hủy. */
+  PICKUP_FAILED = 'pickup_failed',
 }
 
 export enum VoucherType {
@@ -112,8 +124,29 @@ export enum VoucherCustomerScope {
   USERS = 'users',
 }
 
+/** Home-delivery shipping methods a `shipping` voucher can be restricted to
+ *  (matches the storefront's `getDeliveryMethods` ids). Pickup is excluded —
+ *  it has no fee for a shipping voucher to touch. */
+export enum ShippingMethodCode {
+  STANDARD = 'standard',
+  EXPRESS = 'express',
+}
+
 export enum ReviewStatus {
   PENDING = 'pending',
   PUBLISHED = 'published',
   REJECTED = 'rejected',
+}
+
+/** Data shape a category-level attribute *definition* expects — this is the
+ *  filter template (e.g. "Size" is a SELECT with options S/M/L), distinct
+ *  from `ProductAttribute` (a free-form key/value/label already filled in
+ *  per product, with no schema behind it). `SELECT`/`MULTISELECT` are the
+ *  only types that use `options`. */
+export enum CategoryAttributeType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  SELECT = 'select',
+  MULTISELECT = 'multiselect',
+  BOOLEAN = 'boolean',
 }

@@ -23,7 +23,9 @@ export class VoucherCustomerScope1783400000000 implements MigrationInterface {
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`ALTER TABLE "vouchers" DROP COLUMN IF EXISTS "customer_scope"`);
+    await q.query(
+      `ALTER TABLE "vouchers" DROP COLUMN IF EXISTS "customer_scope"`,
+    );
     await q.query(`DROP TYPE IF EXISTS "vouchers_customer_scope_enum"`);
   }
 }

@@ -48,6 +48,14 @@ export class ProductVariant extends BaseEntity {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'Used to compute total shipment weight for carrier APIs (e.g. GHN)',
+  })
+  @Column({ name: 'weight_gram', type: 'int', nullable: true })
+  weightGram?: number;
+
   /** The option values that define this variant (Đen + M). Junction = variant_option_values. */
   @ManyToMany(() => ProductOptionValue)
   @JoinTable({

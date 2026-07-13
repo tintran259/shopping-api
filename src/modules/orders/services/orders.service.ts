@@ -15,6 +15,7 @@ import {
   OrderStockStatus,
   PaymentMethodCode,
   PaymentStatus,
+  ShipmentStatus,
 } from '../../../common/enums';
 import { InventoryService } from '../../branches/services/inventory.service';
 import { CartService } from '../../cart/services/cart.service';
@@ -33,11 +34,13 @@ import {
 } from '../dto/checkout.dto';
 import { Order, ShippingAddressSnapshot } from '../entities/order.entity';
 import { OrdersRepository } from '../repositories/orders.repository';
+import { ShipmentsRepository } from '../repositories/shipments.repository';
 
 /** A resolved order line ready to persist (price/name pulled server-side). */
 interface OrderLineItem {
   variantId: string;
   productId: string;
+  productSlug: string;
   productName: string;
   variantTitle: string;
   sku: string;
@@ -81,6 +84,7 @@ export class OrdersService {
     private readonly addresses: AddressesService,
     private readonly inventory: InventoryService,
     private readonly locations: LocationsService,
+    private readonly shipments: ShipmentsRepository,
   ) {}
 
   /** Logged-in checkout — items come from the customer's active server cart. */
@@ -91,6 +95,7 @@ export class OrdersService {
     const lineItems: OrderLineItem[] = cart.items.map((i) => ({
       variantId: i.variantId,
       productId: i.variant?.productId ?? '',
+      productSlug: i.variant?.product?.slug ?? '',
       productName: i.variant?.product?.name ?? i.variant?.sku ?? 'Item',
       variantTitle: variantLabel(i.variant),
       sku: i.variant?.sku ?? '',
@@ -144,6 +149,7 @@ export class OrdersService {
       lineItems.push({
         variantId: variant.id,
         productId: variant.productId,
+        productSlug: variant.product?.slug ?? '',
         productName: variant.product?.name ?? variant.sku,
         variantTitle: variantLabel(variant),
         sku: variant.sku,
@@ -200,7 +206,8 @@ export class OrdersService {
         {
           branchId: dto.branchId,
           customerId,
-          productIds: lineItems.map((i) => i.productId),
+          productSlugs: lineItems.map((i) => i.productSlug).filter(Boolean),
+          shippingMethod: dto.shippingMethod,
         },
       );
       discount = evaluation.discount;
@@ -285,6 +292,7 @@ export class OrdersService {
         branchId: query.branchId,
         status: query.status,
         paymentStatus: query.paymentStatus,
+        shipmentStatus: query.shipmentStatus,
         q: query.q,
       },
       { by: query.sortBy ?? 'createdAt', order: query.sortOrder ?? 'DESC' },
@@ -393,6 +401,13 @@ export class OrdersService {
       }
       return this.commitStock(order); // reserve → physical deduction
     }
+    // Shipment creation via a carrier's real API (GHN/GHTK) is a separate,
+    // explicit admin action once the order reaches PROCESSING — see
+    // `GhnService`/`GhtkService` and their `POST .../shipment/ghn|ghtk`
+    // endpoints. This used to auto-fire GHN here on every transition, but
+    // that silently assumed every delivery order ships via GHN — now that
+    // GHTK is also a real option, the admin must explicitly choose which
+    // carrier to call after picking one, instead of the BE guessing for them.
     return this.orders.save(order);
   }
 
@@ -407,10 +422,37 @@ export class OrdersService {
     return this.commitStock(order); // prepaid captured → physical deduction
   }
 
-  /** Cancel an order and return its stock (release if reserved, restock if committed).
-   *  Not valid once the order has shipped — the guard lives in {@link updateStatus},
-   *  which this simply delegates to. */
-  cancel(id: string): Promise<Order> {
+  /** Cancel an order and return its stock (release if reserved, restock if
+   *  committed). Normally not valid once the order has shipped (the guard in
+   *  {@link updateStatus} requires a manual return) — but if the carrier has
+   *  already reported the parcel RETURNED (a failed delivery, goods back at the
+   *  branch), cancelling is safe here: the return concern is resolved, so we
+   *  release/restock directly, bypassing that guard. Otherwise delegates to
+   *  {@link updateStatus} unchanged. */
+  /** Shipment outcomes that mean admin intervention is expected, so cancelling
+   *  a shipped order is allowed (goods have returned, or the shipment hit a
+   *  problem — carrier cancel / pickup-fail / lost / damaged). */
+  private static readonly SHIPMENT_RESOLVABLE = new Set<ShipmentStatus>([
+    ShipmentStatus.RETURNED,
+    ShipmentStatus.PROBLEM,
+    ShipmentStatus.PICKUP_FAILED,
+  ]);
+
+  async cancel(id: string): Promise<Order> {
+    const order = await this.findOne(id);
+    if (OrdersService.SHIPPED_OR_BEYOND.has(order.status)) {
+      const shipment = await this.shipments.findByOrder(id);
+      if (
+        !shipment ||
+        !OrdersService.SHIPMENT_RESOLVABLE.has(shipment.status)
+      ) {
+        throw new BadRequestException(
+          'Đơn hàng đã giao/đang giao nên không thể hủy. Vui lòng xử lý hoàn trả thủ công.',
+        );
+      }
+      order.status = OrderStatus.CANCELLED;
+      return this.cancelStock(order); // hàng đã hoàn/sự cố → giải phóng/restock kho
+    }
     return this.updateStatus(id, OrderStatus.CANCELLED);
   }
 

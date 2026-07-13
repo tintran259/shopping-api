@@ -6,6 +6,7 @@ import {
   OrderStockStatus,
   PaymentMethodCode,
   PaymentStatus,
+  ShipmentStatus,
 } from '../../../common/enums';
 import { Order } from '../entities/order.entity';
 
@@ -50,6 +51,7 @@ export class OrdersRepository {
       branchId?: string;
       status?: OrderStatus;
       paymentStatus?: PaymentStatus;
+      shipmentStatus?: ShipmentStatus;
       q?: string;
     },
     sort: { by: string; order: 'ASC' | 'DESC' },
@@ -69,6 +71,12 @@ export class OrdersRepository {
         paymentStatus: filters.paymentStatus,
       });
     }
+    if (filters.shipmentStatus) {
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM shipments s WHERE s.order_id = o.id AND s.status = :shipmentStatus)`,
+        { shipmentStatus: filters.shipmentStatus },
+      );
+    }
     if (filters.q) {
       qb.andWhere(
         '(o.code ILIKE :q OR o.recipientName ILIKE :q OR o.recipientPhone ILIKE :q)',
@@ -76,11 +84,30 @@ export class OrdersRepository {
       );
     }
 
-    return qb
+    const total = await qb.clone().getCount();
+
+    const { entities, raw } = await qb
+      .addSelect(
+        (sub) =>
+          sub
+            .select('s.status')
+            .from('shipments', 's')
+            .where('s.order_id = o.id')
+            .andWhere('s.carrier IS NOT NULL')
+            .limit(1),
+        'shipmentStatus',
+      )
       .orderBy(`o.${sort.by}`, sort.order)
       .skip(skip)
       .take(take)
-      .getManyAndCount();
+      .getRawAndEntities();
+
+    const data = entities.map((order, i) => {
+      order.shipmentStatus = (raw[i]?.shipmentStatus as string) ?? null;
+      return order;
+    });
+
+    return [data, total];
   }
 
   /** Fresh, filtered query builder shared by every `summary()` aggregate below. */

@@ -30,21 +30,26 @@ export class AdminCustomersController {
   constructor(private readonly customers: CustomersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List customers — filter by type/status, search (q), sort' })
+  @ApiOperation({
+    summary: 'List customers — filter by type/status, search (q), sort',
+  })
   findAll(@Query() query: AdminCustomerQueryDto) {
     return this.customers.findAllAdmin(query);
   }
 
   @Post('b2b')
   @ApiOperation({
-    summary: 'Create a B2B account + company profile (staff-entered, e.g. a sales deal closed offline)',
+    summary:
+      'Create a B2B account + company profile (staff-entered, e.g. a sales deal closed offline)',
   })
   createB2b(@Body() dto: CreateB2bCustomerDto) {
     return this.customers.createB2b(dto);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a customer by id (incl. B2B profile + addresses)' })
+  @ApiOperation({
+    summary: 'Get a customer by id (incl. B2B profile + addresses)',
+  })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.customers.findByIdAdmin(id);
   }

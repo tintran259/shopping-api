@@ -50,7 +50,7 @@ export class AdminProductsController {
   @Get(':id/inventory-summary')
   @ApiOperation({
     summary:
-      'Per-branch stock summed across the product\'s variants — powers the status-change confirm dialog',
+      "Per-branch stock summed across the product's variants — powers the status-change confirm dialog",
   })
   inventorySummary(@Param('id', ParseUUIDPipe) id: string) {
     return this.products.inventorySummary(id);

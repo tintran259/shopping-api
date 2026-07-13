@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
-import { OrderStatus, PaymentStatus } from '../../../common/enums';
+import { OrderStatus, PaymentStatus, ShipmentStatus } from '../../../common/enums';
 
 /** Columns the admin order list may be sorted by (allowlist — prevents SQL injection). */
 export const ORDER_SORT_FIELDS = [
@@ -41,4 +41,12 @@ export class AdminOrderQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['ASC', 'DESC'])
   sortOrder?: 'ASC' | 'DESC';
+
+  @ApiPropertyOptional({
+    enum: ShipmentStatus,
+    description: 'Filter by shipment status — useful for surfacing failed deliveries',
+  })
+  @IsOptional()
+  @IsEnum(ShipmentStatus)
+  shipmentStatus?: ShipmentStatus;
 }

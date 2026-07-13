@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Category } from '../entities/category.entity';
 
+/** A category row with its own direct product count attached — 0 for
+ *  non-leaf nodes (products only ever attach to leaves; the admin list rolls
+ *  up subtree totals client-side from these per-node counts). */
+export type CategoryWithProductCount = Category & { productsCount: number };
+
 @Injectable()
 export class CategoriesRepository {
   constructor(
@@ -32,8 +37,14 @@ export class CategoriesRepository {
     return this.repo.remove(category);
   }
 
-  findAll(): Promise<Category[]> {
-    return this.repo.find({ order: { sortOrder: 'ASC', name: 'ASC' } });
+  async findAll(): Promise<CategoryWithProductCount[]> {
+    const rows = await this.repo
+      .createQueryBuilder('c')
+      .loadRelationCountAndMap('c.productsCount', 'c.products')
+      .orderBy('c.sortOrder', 'ASC')
+      .addOrderBy('c.name', 'ASC')
+      .getMany();
+    return rows as CategoryWithProductCount[];
   }
 
   findById(id: string): Promise<Category | null> {
@@ -49,5 +60,21 @@ export class CategoriesRepository {
 
   findByIds(ids: string[]): Promise<Category[]> {
     return this.repo.findBy({ id: In(ids) });
+  }
+
+  /** Bulk sortOrder update for a drag-and-drop reorder — one transaction
+   *  instead of the FE firing one PATCH per moved row. */
+  async reorder(items: { id: string; sortOrder: number }[]): Promise<void> {
+    await this.repo.manager.transaction(async (manager) => {
+      await Promise.all(
+        items.map((item) =>
+          manager.update(
+            Category,
+            { id: item.id },
+            { sortOrder: item.sortOrder },
+          ),
+        ),
+      );
+    });
   }
 }

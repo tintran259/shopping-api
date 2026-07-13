@@ -15,7 +15,10 @@ export class CreateB2bCustomerDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ minLength: 8, description: 'Initial password for the account' })
+  @ApiProperty({
+    minLength: 8,
+    description: 'Initial password for the account',
+  })
   @IsString()
   @MinLength(8)
   @MaxLength(72)

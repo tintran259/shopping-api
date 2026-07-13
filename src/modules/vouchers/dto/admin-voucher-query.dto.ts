@@ -20,4 +20,6 @@ export class AdminVoucherQueryDto extends PaginationQueryDto {
   state?: VoucherState;
 }
 
-export type VoucherStateCounts = Record<VoucherState, number> & { total: number };
+export type VoucherStateCounts = Record<VoucherState, number> & {
+  total: number;
+};

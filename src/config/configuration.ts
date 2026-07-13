@@ -25,4 +25,25 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
+  /** GHN (Giao Hàng Nhanh) shipping carrier API. Sandbox host by default —
+   *  point GHN_BASE_URL at the production gateway once live. A branch without
+   *  its own `ghnShopId` falls back to GHN_DEFAULT_SHOP_ID. */
+  ghn: {
+    baseUrl:
+      process.env.GHN_BASE_URL ??
+      'https://dev-online-gateway.ghn.vn/shiip/public-api',
+    token: process.env.GHN_TOKEN ?? '',
+    defaultShopId: process.env.GHN_DEFAULT_SHOP_ID ?? '',
+  },
+  /** GHTK (Giao Hàng Tiết Kiệm) shipping carrier API — public docs at
+   *  api.ghtk.vn, no sandbox host documented (their staging/prod split works
+   *  differently from GHN's), so GHTK_BASE_URL defaults straight to prod. */
+  ghtk: {
+    baseUrl:
+      process.env.GHTK_BASE_URL ?? 'https://services.giaohangtietkiem.vn',
+    token: process.env.GHTK_TOKEN ?? '',
+    /** "X-Client-Source" header — GHTK's partner/integration code, issued
+     *  alongside the token. */
+    clientSource: process.env.GHTK_CLIENT_SOURCE ?? '',
+  },
 });

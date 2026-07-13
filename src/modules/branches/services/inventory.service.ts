@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { InventoryStatus, ProductStatus } from '../../../common/enums';
@@ -83,7 +87,9 @@ export class InventoryService {
       record.status = dto.status;
     } else if (record.status !== InventoryStatus.PREORDER) {
       record.status =
-        dto.quantity > 0 ? InventoryStatus.IN_STOCK : InventoryStatus.OUT_OF_STOCK;
+        dto.quantity > 0
+          ? InventoryStatus.IN_STOCK
+          : InventoryStatus.OUT_OF_STOCK;
     }
     return this.inventory.save(record);
   }
