@@ -241,6 +241,7 @@ export class ProductsService {
         brandId: dto.brandId,
         basePrice: dto.basePrice,
         compareAtPrice: dto.compareAtPrice,
+        expiryDate: dto.expiryDate,
         categories,
         images: (dto.images ?? []).map((img, i) => ({
           url: img.url,

@@ -233,6 +233,7 @@ export class OrdersService {
         customerId,
         branchId: dto.branchId,
         fulfillment: dto.fulfillment,
+        shippingMethod: dto.shippingMethod,
         channel,
         status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,

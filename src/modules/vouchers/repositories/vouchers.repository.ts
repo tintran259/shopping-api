@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, EntityManager, Repository } from 'typeorm';
+import { DeepPartial, EntityManager, In, Repository } from 'typeorm';
 import {
   AdminVoucherQueryDto,
   VOUCHER_STATE_VALUES,
@@ -10,11 +10,12 @@ import {
 import { Voucher } from '../entities/voucher.entity';
 import { VoucherRedemption } from '../entities/voucher-redemption.entity';
 
-/** A voucher row for the admin list, with scoping arrays reduced to their
- *  counts — the list only ever shows "N sản phẩm / N chi nhánh / N khách",
- *  never the members themselves, so loading the full arrays (which would also
- *  break skip/take pagination once a voucher has many rows on a to-many side)
- *  is unnecessary. Full arrays are still loaded by `findById` for the edit form. */
+/** A voucher row for the admin list. `products`/`customers` are reduced to
+ *  their counts (the list only shows "N sản phẩm / N khách"), but the full
+ *  `branches` array IS loaded (via a page-scoped second query in `searchAdmin`,
+ *  not a join, so pagination stays correct) so the list can show which branches
+ *  a voucher is limited to, not just how many. Full arrays for every relation
+ *  are still loaded by `findById` for the edit form. */
 export type VoucherListRow = Voucher & {
   productsCount: number;
   branchesCount: number;
@@ -104,6 +105,24 @@ export class VouchersRepository {
     }
 
     const [data, total] = await qb.getManyAndCount();
+
+    // Đính kèm mảng `branches` cho các voucher của trang hiện tại. Load bằng một
+    // query phụ theo id (thay vì leftJoinAndSelect ở trên) để không nhân dòng —
+    // join to-many sẽ phá skip/take + count. Chỉ tối đa `limit` voucher/trang
+    // nên rất nhẹ. Các quan hệ khác vẫn để dạng count như trước.
+    if (data.length) {
+      const withBranches = await this.vouchers.find({
+        where: { id: In(data.map((v) => v.id)) },
+        relations: { branches: true },
+      });
+      const branchesById = new Map(
+        withBranches.map((v) => [v.id, v.branches ?? []]),
+      );
+      for (const v of data) {
+        v.branches = branchesById.get(v.id) ?? [];
+      }
+    }
+
     return [data as VoucherListRow[], total];
   }
 

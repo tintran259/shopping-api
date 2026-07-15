@@ -3,7 +3,9 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumberString,
   IsObject,
@@ -97,6 +99,14 @@ export class CreateProductDto {
   @IsNumberString()
   compareAtPrice?: string;
 
+  @ApiPropertyOptional({
+    format: 'date',
+    description: 'Hạn sử dụng (YYYY-MM-DD). Bỏ trống = vô thời hạn.',
+  })
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
+
   @ApiPropertyOptional({ type: [String], format: 'uuid' })
   @IsOptional()
   @IsArray()
@@ -146,11 +156,29 @@ export class ProductQueryDto extends PaginationQueryDto {
   status?: ProductStatus;
 
   @ApiPropertyOptional({
-    description: 'Sort, e.g. "createdAt:DESC" | "basePrice:ASC"',
+    description: 'Sort, e.g. "createdAt:DESC" | "basePrice:ASC" | "expiryDate:ASC"',
   })
   @IsOptional()
   @IsString()
   sort?: string;
+
+  @ApiPropertyOptional({
+    enum: ['valid', 'expiring', 'expired', 'none'],
+    description:
+      'Lọc theo hạn dùng: valid=còn hạn, expiring=sắp hết hạn (trong expiringInDays ngày), expired=đã hết hạn, none=vô thời hạn.',
+  })
+  @IsOptional()
+  @IsIn(['valid', 'expiring', 'expired', 'none'])
+  expiryState?: 'valid' | 'expiring' | 'expired' | 'none';
+
+  @ApiPropertyOptional({
+    description: 'Ngưỡng "sắp hết hạn" tính bằng ngày (mặc định 30).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expiringInDays?: number;
 
   @ApiPropertyOptional({ description: 'Min price (VND)' })
   @IsOptional()

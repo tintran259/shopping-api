@@ -84,6 +84,13 @@ export class Product extends BaseEntity {
   @Column({ default: 'VND' })
   currency: string;
 
+  // Hạn sử dụng của sản phẩm (ngày). Null = vô thời hạn — áp dụng cho hàng
+  // không có HSD (quần áo, đồ dùng…). Lưu dạng `date` (không giờ) để BO lọc
+  // "sắp hết hạn"/"đã hết hạn" theo ngày hiện tại.
+  @ApiProperty({ required: false, type: String, format: 'date' })
+  @Column({ name: 'expiry_date', type: 'date', nullable: true })
+  expiryDate?: string;
+
   @ApiProperty({ description: 'isNew|isBestSeller|isFeatured|isOnSale' })
   @Column({ type: 'jsonb', default: () => "'{}'" })
   flags: ProductFlags;

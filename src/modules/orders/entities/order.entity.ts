@@ -15,6 +15,7 @@ import {
   OrderStockStatus,
   PaymentMethodCode,
   PaymentStatus,
+  ShippingMethodCode,
 } from '../../../common/enums';
 import { Branch } from '../../branches/entities/branch.entity';
 import { OrderItem } from './order-item.entity';
@@ -60,6 +61,14 @@ export class Order extends BaseEntity {
   @ApiProperty({ enum: FulfillmentType })
   @Column({ type: 'enum', enum: FulfillmentType })
   fulfillment: FulfillmentType;
+
+  // Phương thức giao hàng khách chọn (giao tiêu chuẩn / giao nhanh). Chỉ có ý
+  // nghĩa với đơn `delivery`; null cho đơn nhận tại cửa hàng hoặc đơn cũ. Lưu
+  // dạng varchar (không phải pg enum) vì đây là mã "mềm" phía storefront, có thể
+  // mở rộng — BO đọc ra để gắn nhãn "giao nhanh" cho đơn cần ưu tiên.
+  @ApiProperty({ enum: ShippingMethodCode, required: false })
+  @Column({ name: 'shipping_method', type: 'varchar', nullable: true })
+  shippingMethod?: ShippingMethodCode;
 
   @ApiProperty({ enum: OrderStatus })
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })

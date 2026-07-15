@@ -18,7 +18,13 @@ export interface AttrFacetRow {
   count: number;
 }
 
-const SORTABLE = new Set(['createdAt', 'basePrice', 'name', 'ratingAvg']);
+const SORTABLE = new Set([
+  'createdAt',
+  'basePrice',
+  'name',
+  'ratingAvg',
+  'expiryDate',
+]);
 
 const FULL_RELATIONS = {
   brand: true,
@@ -103,6 +109,31 @@ export class ProductsRepository {
     }
     if (query.category) {
       qb.andWhere('category.slug = :slug', { slug: query.category });
+    }
+    if (query.expiryState) {
+      const days = query.expiringInDays ?? 30;
+      switch (query.expiryState) {
+        case 'none':
+          qb.andWhere('product.expiryDate IS NULL');
+          break;
+        case 'expired':
+          qb.andWhere(
+            'product.expiryDate IS NOT NULL AND product.expiryDate < CURRENT_DATE',
+          );
+          break;
+        case 'expiring':
+          qb.andWhere(
+            'product.expiryDate IS NOT NULL AND product.expiryDate >= CURRENT_DATE AND product.expiryDate <= CURRENT_DATE + make_interval(days => :days)',
+            { days },
+          );
+          break;
+        case 'valid':
+          qb.andWhere(
+            'product.expiryDate IS NOT NULL AND product.expiryDate > CURRENT_DATE + make_interval(days => :days)',
+            { days },
+          );
+          break;
+      }
     }
     this.applyAdvancedFilters(qb, query);
 

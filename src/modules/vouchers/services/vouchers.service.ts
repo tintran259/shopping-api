@@ -23,6 +23,16 @@ export interface VoucherEvaluation {
   discount: number;
 }
 
+/** Định dạng số tiền VND cho thông báo lỗi (vd `150.000 ₫`) — dùng khi báo đơn
+ *  tối thiểu chưa đạt lúc kiểm tra mã giảm giá. */
+function formatVnd(amount: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 /** Cart/order context checked against a voucher's scoping restrictions
  *  (empty relation on the voucher = unrestricted on that dimension). */
 export interface VoucherContext {
@@ -146,18 +156,18 @@ export class VouchersService {
   ): Promise<VoucherEvaluation> {
     const voucher = await this.vouchers.findByCode(code.toUpperCase().trim());
     if (!voucher || !voucher.isActive) {
-      throw new BadRequestException('Invalid voucher code');
+      throw new BadRequestException('Mã giảm giá không hợp lệ');
     }
 
     const now = new Date();
     if (voucher.startsAt && now < voucher.startsAt) {
-      throw new BadRequestException('Voucher is not active yet');
+      throw new BadRequestException('Mã giảm giá chưa đến thời gian áp dụng');
     }
     if (voucher.endsAt && now > voucher.endsAt) {
-      throw new BadRequestException('Voucher has expired');
+      throw new BadRequestException('Mã giảm giá đã hết hạn');
     }
     if (voucher.usageLimit != null && voucher.usedCount >= voucher.usageLimit) {
-      throw new BadRequestException('Voucher usage limit reached');
+      throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
     }
     if (voucher.perCustomerLimit != null && context.customerId) {
       const used = await this.vouchers.countRedemptionsByCustomer(
@@ -170,7 +180,7 @@ export class VouchersService {
     }
     if (subtotal < Number(voucher.minSubtotal)) {
       throw new BadRequestException(
-        `Order subtotal must be at least ${voucher.minSubtotal}`,
+        `Đơn tối thiểu ${formatVnd(Number(voucher.minSubtotal))} để dùng mã này`,
       );
     }
     if (
