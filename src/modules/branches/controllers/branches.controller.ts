@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -9,13 +10,15 @@ import {
   Patch,
   Post,
   Put,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  BranchScope,
+  BranchScopeCtx,
+  isBranchAllowed,
+} from '../../../common/decorators/branch-scope.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { CreateBranchDto, UpdateBranchDto } from '../dto/branch.dto';
 import { UpsertInventoryDto } from '../dto/inventory.dto';
 import { BranchesService } from '../services/branches.service';
@@ -45,17 +48,21 @@ export class BranchesController {
 
   @Put('inventory')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('inventory.update')
   @ApiOperation({ summary: '[admin] Set stock for a (branch, variant)' })
-  upsertInventory(@Body() dto: UpsertInventoryDto) {
+  upsertInventory(
+    @Body() dto: UpsertInventoryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    if (!isBranchAllowed(scope, dto.branchId)) {
+      throw new ForbiddenException('Chi nhánh ngoài phạm vi của bạn');
+    }
     return this.inventory.upsert(dto);
   }
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('inventory.create')
   @ApiOperation({ summary: '[admin] Create a branch' })
   create(@Body() dto: CreateBranchDto) {
     return this.branches.create(dto);
@@ -63,20 +70,31 @@ export class BranchesController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('inventory.update')
   @ApiOperation({ summary: '[admin] Update a branch' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBranchDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBranchDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    if (!isBranchAllowed(scope, id)) {
+      throw new ForbiddenException('Chi nhánh ngoài phạm vi của bạn');
+    }
     return this.branches.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('inventory.delete')
   @ApiOperation({ summary: '[admin] Delete a branch' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    if (!isBranchAllowed(scope, id)) {
+      throw new ForbiddenException('Chi nhánh ngoài phạm vi của bạn');
+    }
     return this.branches.remove(id);
   }
 }

@@ -20,6 +20,8 @@ export class RolesGuard implements CanActivate {
     if (!required || required.length === 0) return true;
 
     const { user } = context.switchToHttp().getRequest();
+    // Super Admin luôn qua (toàn quyền) — an toàn cho mọi @Roles còn sót.
+    if (user?.role === CustomerRole.SUPER_ADMIN) return true;
     if (!user || !required.includes(user.role)) {
       throw new ForbiddenException('Insufficient role');
     }

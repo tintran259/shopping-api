@@ -11,8 +11,6 @@ export class ProductExpiryDate1784600000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "products" DROP COLUMN "expiry_date"`,
-    );
+    await queryRunner.query(`ALTER TABLE "products" DROP COLUMN "expiry_date"`);
   }
 }

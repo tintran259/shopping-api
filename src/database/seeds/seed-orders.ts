@@ -88,7 +88,10 @@ const ADDR_HN = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────
-function calcTotals(items: Array<{ price: string; qty: number }>, fee = 30_000) {
+function calcTotals(
+  items: Array<{ price: string; qty: number }>,
+  fee = 30_000,
+) {
   const subtotal = items.reduce((s, i) => s + parseFloat(i.price) * i.qty, 0);
   return {
     subtotal: subtotal.toFixed(2),
@@ -310,14 +313,16 @@ const TEST_CASES: TC[] = [
       shippedAt: daysAgo(6),
       inTransitAt: daysAgo(6),
       problemAt: daysAgo(2),
-      carrierStatusRaw: 'Phát sinh sự cố - Hàng hư hỏng trong quá trình vận chuyển',
+      carrierStatusRaw:
+        'Phát sinh sự cố - Hàng hư hỏng trong quá trình vận chuyển',
     },
     placedDaysAgo: 8,
   },
   // ── 9. Không lấy được hàng (hàng chưa rời kho) ──────────────────────
   {
     code: 'TC-09-PICKUP-FAILED',
-    label: '[TC-09] Không lấy được hàng — carrier không đến lấy (PICKUP_FAILED)',
+    label:
+      '[TC-09] Không lấy được hàng — carrier không đến lấy (PICKUP_FAILED)',
     branchId: BRANCH_Q1,
     fulfillment: FulfillmentType.DELIVERY,
     status: OrderStatus.PROCESSING,
@@ -425,7 +430,11 @@ async function run() {
     );
 
     const addr = tc.address
-      ? { ...tc.address, recipientName: tc.recipientName, phone: tc.recipientPhone }
+      ? {
+          ...tc.address,
+          recipientName: tc.recipientName,
+          phone: tc.recipientPhone,
+        }
       : undefined;
 
     const placedAt = daysAgo(tc.placedDaysAgo);

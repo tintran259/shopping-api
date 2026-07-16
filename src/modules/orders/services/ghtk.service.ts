@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { FulfillmentType, PaymentStatus, ShipmentStatus } from '../../../common/enums';
+import {
+  FulfillmentType,
+  PaymentStatus,
+  ShipmentStatus,
+} from '../../../common/enums';
 import { Branch } from '../../branches/entities/branch.entity';
 import { BranchesService } from '../../branches/services/branches.service';
 import { ProductsService } from '../../catalog/services/products.service';
@@ -60,7 +64,11 @@ export class GhtkService {
       existing?.status === ShipmentStatus.PROBLEM ||
       existing?.status === ShipmentStatus.PICKUP_FAILED;
 
-    if (existing?.trackingNo && existing.carrier === 'GHTK' && !isFailedShipment) {
+    if (
+      existing?.trackingNo &&
+      existing.carrier === 'GHTK' &&
+      !isFailedShipment
+    ) {
       return existing; // idempotent for active / delivered shipments
     }
 
@@ -262,9 +270,10 @@ export class GhtkService {
     <ul>${itemList}</ul>
   </div>
 
-  ${isCod
-    ? `<div class="cod-bar">Thu hộ (COD): ${codAmount}₫</div>`
-    : `<div class="no-cod">Đã thanh toán – Không thu hộ</div>`
+  ${
+    isCod
+      ? `<div class="cod-bar">Thu hộ (COD): ${codAmount}₫</div>`
+      : `<div class="no-cod">Đã thanh toán – Không thu hộ</div>`
   }
 
   <div class="footer">

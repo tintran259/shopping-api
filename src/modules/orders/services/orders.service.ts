@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { BranchScopeCtx } from '../../../common/decorators/branch-scope.decorator';
 import { PaginatedResult } from '../../../common/dto/paginated-result';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import {
@@ -70,6 +71,12 @@ function lineImageUrl(variant?: {
   const images = variant?.product?.images ?? [];
   const primary = images.find((i) => i.isPrimary) ?? images[0];
   return primary?.url;
+}
+
+/** Chuyển phạm vi chi nhánh → danh sách id để lọc query. `undefined` = không
+ *  giới hạn (super admin / role mọi chi nhánh / route không RBAC). */
+function allowedBranchIds(scope?: BranchScopeCtx): string[] | undefined {
+  return scope && !scope.allBranches ? scope.branchIds : undefined;
 }
 
 @Injectable()
@@ -287,7 +294,7 @@ export class OrdersService {
     return new PaginatedResult(data, total, query.page, query.limit);
   }
 
-  async findAll(query: AdminOrderQueryDto) {
+  async findAll(query: AdminOrderQueryDto, scope?: BranchScopeCtx) {
     const [data, total] = await this.orders.searchAdmin(
       {
         branchId: query.branchId,
@@ -295,6 +302,8 @@ export class OrdersService {
         paymentStatus: query.paymentStatus,
         shipmentStatus: query.shipmentStatus,
         q: query.q,
+        // Giới hạn theo chi nhánh được phép (undefined = mọi chi nhánh).
+        allowedBranchIds: allowedBranchIds(scope),
       },
       { by: query.sortBy ?? 'createdAt', order: query.sortOrder ?? 'DESC' },
       query.skip,
@@ -305,9 +314,10 @@ export class OrdersService {
 
   /** Dashboard aggregate — branch/date-range scoped, computed in SQL so it's
    *  correct for any order volume (not capped like the paginated list). */
-  async summary(query: AdminOrderSummaryQueryDto) {
+  async summary(query: AdminOrderSummaryQueryDto, scope?: BranchScopeCtx) {
     const raw = await this.orders.summary({
       branchId: query.branchId,
+      allowedBranchIds: allowedBranchIds(scope),
       dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
       dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
     });

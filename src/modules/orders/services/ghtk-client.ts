@@ -103,9 +103,7 @@ export class GhtkClient {
       },
     );
     if (!res.ok) {
-      throw new BadGatewayException(
-        `GHTK label API lỗi: ${res.statusText}`,
-      );
+      throw new BadGatewayException(`GHTK label API lỗi: ${res.statusText}`);
     }
     return res.text();
   }

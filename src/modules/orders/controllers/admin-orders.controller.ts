@@ -12,9 +12,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import {
+  BranchScope,
+  BranchScopeCtx,
+} from '../../../common/decorators/branch-scope.decorator';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import { OrderScopeGuard } from '../guards/order-scope.guard';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
 import { AdminCreateOrderDto } from '../dto/checkout.dto';
@@ -35,8 +38,7 @@ import { ShipmentsService } from '../services/shipments.service';
  */
 @ApiTags('admin/orders')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(CustomerRole.ADMIN)
+@UseGuards(OrderScopeGuard)
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(
@@ -47,6 +49,7 @@ export class AdminOrdersController {
   ) {}
 
   @Post()
+  @RequirePermission('orders.create')
   @ApiOperation({
     summary:
       'Create an order on behalf of a customer/walk-in (staff-entered — phone order, ' +
@@ -58,30 +61,40 @@ export class AdminOrdersController {
   }
 
   @Get()
+  @RequirePermission('orders.view')
   @ApiOperation({
     summary: 'List orders — filter by branch/status/payment, search (q), sort',
   })
-  findAll(@Query() query: AdminOrderQueryDto) {
-    return this.orders.findAll(query);
+  findAll(
+    @Query() query: AdminOrderQueryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.orders.findAll(query, scope);
   }
 
   @Get('summary')
+  @RequirePermission('orders.view')
   @ApiOperation({
     summary:
       'Dashboard aggregate — branch/date-range scoped order count, PAID revenue, ' +
       'per-status breakdown and a daily revenue series (SQL COUNT/SUM, not paginated)',
   })
-  summary(@Query() query: AdminOrderSummaryQueryDto) {
-    return this.orders.summary(query);
+  summary(
+    @Query() query: AdminOrderSummaryQueryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.orders.summary(query, scope);
   }
 
   @Get(':id')
+  @RequirePermission('orders.view')
   @ApiOperation({ summary: 'Get any order by id (no ownership check)' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.orders.findOne(id);
   }
 
   @Patch(':id/status')
+  @RequirePermission('orders.update')
   @ApiOperation({ summary: 'Update order fulfilment status' })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
@@ -91,12 +104,14 @@ export class AdminOrdersController {
   }
 
   @Post(':id/confirm-payment')
+  @RequirePermission('orders.update')
   @ApiOperation({ summary: 'Confirm payment (gateway webhook stand-in)' })
   confirmPayment(@Param('id', ParseUUIDPipe) id: string) {
     return this.orders.confirmPayment(id);
   }
 
   @Post(':id/cancel')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary: 'Cancel any order (BE enforces the not-shipped rule)',
   })
@@ -105,6 +120,7 @@ export class AdminOrdersController {
   }
 
   @Get(':id/shipment')
+  @RequirePermission('orders.view')
   @ApiOperation({
     summary:
       'Get the order’s shipment tracking info (carrier/tracking no/fee/status) — ' +
@@ -115,6 +131,7 @@ export class AdminOrdersController {
   }
 
   @Put(':id/shipment')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary: 'Create or update the order’s shipment tracking info',
   })
@@ -126,6 +143,7 @@ export class AdminOrdersController {
   }
 
   @Post(':id/shipment/ghn')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary:
       'Explicitly create a real GHN shipping order for this order (admin picks GHN, clicks create) — address/weight/etc. are derived server-side, only an optional shipper note can be added.',
@@ -138,6 +156,7 @@ export class AdminOrdersController {
   }
 
   @Get(':id/shipment/label')
+  @RequirePermission('orders.view')
   @Header('Content-Type', 'text/html; charset=utf-8')
   @ApiOperation({
     summary:
@@ -148,6 +167,7 @@ export class AdminOrdersController {
   }
 
   @Post(':id/shipment/ghtk')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary:
       'Explicitly create a real GHTK shipping order for this order (admin picks GHTK, fills the delivery district, clicks create).',
@@ -160,6 +180,7 @@ export class AdminOrdersController {
   }
 
   @Post(':id/shipment/reset')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary:
       'Reset a failed shipment (returned/problem/pickup-failed) so the admin can pick a carrier and create a fresh shipment from scratch.',
@@ -169,6 +190,7 @@ export class AdminOrdersController {
   }
 
   @Post(':id/shipment/mock-webhook')
+  @RequirePermission('orders.update')
   @ApiOperation({
     summary:
       'Testing helper — simulates the carrier webhook (GHN/GHTK can’t reach localhost) so the status-sync flow can be exercised without a real account.',

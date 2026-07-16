@@ -7,12 +7,9 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { AdminCustomerQueryDto } from '../dto/admin-customer-query.dto';
 import { CreateB2bCustomerDto } from '../dto/create-b2b-customer.dto';
 import { UpdateCustomerStatusDto } from '../dto/update-customer-status.dto';
@@ -23,13 +20,12 @@ import { CustomersService } from '../services/customers.service';
  *  list (see `CustomersRepository.searchAdmin`). */
 @ApiTags('admin/customers')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(CustomerRole.ADMIN)
 @Controller('admin/customers')
 export class AdminCustomersController {
   constructor(private readonly customers: CustomersService) {}
 
   @Get()
+  @RequirePermission('customers.view')
   @ApiOperation({
     summary: 'List customers — filter by type/status, search (q), sort',
   })
@@ -38,6 +34,7 @@ export class AdminCustomersController {
   }
 
   @Post('b2b')
+  @RequirePermission('customers.create')
   @ApiOperation({
     summary:
       'Create a B2B account + company profile (staff-entered, e.g. a sales deal closed offline)',
@@ -47,6 +44,7 @@ export class AdminCustomersController {
   }
 
   @Get(':id')
+  @RequirePermission('customers.view')
   @ApiOperation({
     summary: 'Get a customer by id (incl. B2B profile + addresses)',
   })
@@ -55,6 +53,7 @@ export class AdminCustomersController {
   }
 
   @Patch(':id/status')
+  @RequirePermission('customers.update')
   @ApiOperation({ summary: 'Suspend or reactivate a customer account' })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,

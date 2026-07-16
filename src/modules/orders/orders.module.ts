@@ -13,6 +13,7 @@ import { GhtkWebhookController } from './controllers/ghtk-webhook.controller';
 import { OrdersController } from './controllers/orders.controller';
 import { OrdersCron } from './orders.cron';
 import { Order } from './entities/order.entity';
+import { OrderScopeGuard } from './guards/order-scope.guard';
 import { OrderItem } from './entities/order-item.entity';
 import { Shipment } from './entities/shipment.entity';
 import { ShippingMethod } from './entities/shipping-method.entity';
@@ -54,6 +55,7 @@ import { ShipmentsService } from './services/shipments.service';
     GhnAddressResolver,
     GhtkService,
     GhtkClient,
+    OrderScopeGuard,
   ],
   exports: [OrdersService],
 })

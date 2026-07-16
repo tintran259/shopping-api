@@ -8,13 +8,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { CategoriesService } from '../services/categories.service';
 import {
   CreateCategoryDto,
@@ -43,8 +40,7 @@ export class CategoriesController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.create')
   @ApiOperation({ summary: '[admin] Create a category' })
   create(@Body() dto: CreateCategoryDto) {
     return this.categories.create(dto);
@@ -52,8 +48,7 @@ export class CategoriesController {
 
   @Patch('reorder')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.update')
   @ApiOperation({
     summary: '[admin] Bulk sortOrder update for a drag-and-drop reorder',
   })
@@ -63,8 +58,7 @@ export class CategoriesController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.update')
   @ApiOperation({ summary: '[admin] Update a category' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -76,8 +70,7 @@ export class CategoriesController {
   @Delete(':id')
   @HttpCode(204)
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.delete')
   @ApiOperation({ summary: '[admin] Delete a category' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.categories.remove(id);

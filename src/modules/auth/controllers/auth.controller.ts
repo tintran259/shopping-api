@@ -5,7 +5,6 @@ import {
   CurrentUser,
 } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
-import { CustomersService } from '../../customers/services/customers.service';
 import { AuthService } from '../services/auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
@@ -13,10 +12,7 @@ import { RegisterDto } from '../dto/register.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly auth: AuthService,
-    private readonly customers: CustomersService,
-  ) {}
+  constructor(private readonly auth: AuthService) {}
 
   @Public()
   @Post('register')
@@ -35,8 +31,8 @@ export class AuthController {
 
   @Get('me')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get the current authenticated user' })
+  @ApiOperation({ summary: 'Get the current authenticated user + permissions' })
   me(@CurrentUser() user: AuthUser) {
-    return this.customers.findById(user.id);
+    return this.auth.me(user.id);
   }
 }

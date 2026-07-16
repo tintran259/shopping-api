@@ -8,13 +8,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import {
   CreateCategoryAttributeDto,
   UpdateCategoryAttributeDto,
@@ -35,8 +32,7 @@ export class CategoryAttributesController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.create')
   @ApiOperation({
     summary: '[admin] Define a new attribute template for a category',
   })
@@ -49,8 +45,7 @@ export class CategoryAttributesController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.update')
   @ApiOperation({ summary: '[admin] Update an attribute template' })
   update(
     @Param('categoryId', ParseUUIDPipe) categoryId: string,
@@ -63,8 +58,7 @@ export class CategoryAttributesController {
   @Delete(':id')
   @HttpCode(204)
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.delete')
   @ApiOperation({ summary: '[admin] Delete an attribute template' })
   remove(
     @Param('categoryId', ParseUUIDPipe) categoryId: string,

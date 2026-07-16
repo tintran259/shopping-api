@@ -11,10 +11,13 @@ export enum CustomerStatus {
   DISABLED = 'disabled',
 }
 
-/** Authorization role (admin = staff/back-office). */
+/** Authorization role. `customer` = storefront; `admin` = back-office staff
+ *  (quyền giới hạn theo StaffRole được gán); `super_admin` = toàn quyền, mọi
+ *  chi nhánh, quản lý role + tài khoản admin. */
 export enum CustomerRole {
   CUSTOMER = 'customer',
   ADMIN = 'admin',
+  SUPER_ADMIN = 'super_admin',
 }
 
 export enum ProductStatus {

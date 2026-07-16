@@ -8,13 +8,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { BrandsService } from '../services/brands.service';
 import { CreateBrandDto, UpdateBrandDto } from '../dto/brand.dto';
 
@@ -39,8 +36,7 @@ export class BrandsController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.create')
   @ApiOperation({ summary: '[admin] Create a brand' })
   create(@Body() dto: CreateBrandDto) {
     return this.brands.create(dto);
@@ -48,8 +44,7 @@ export class BrandsController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.update')
   @ApiOperation({ summary: '[admin] Update a brand' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBrandDto) {
     return this.brands.update(id, dto);
@@ -58,8 +53,7 @@ export class BrandsController {
   @Delete(':id')
   @HttpCode(204)
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('catalog.delete')
   @ApiOperation({ summary: '[admin] Delete a brand' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.brands.remove(id);

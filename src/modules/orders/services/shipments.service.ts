@@ -36,7 +36,8 @@ export class ShipmentsService {
   async resetForRedeliver(orderId: string): Promise<Shipment> {
     await this.assertOrderExists(orderId);
     const shipment = await this.shipments.findByOrder(orderId);
-    if (!shipment) throw new BadRequestException('Đơn hàng chưa có thông tin vận chuyển');
+    if (!shipment)
+      throw new BadRequestException('Đơn hàng chưa có thông tin vận chuyển');
 
     const FAILED = new Set([
       ShipmentStatus.RETURNED,

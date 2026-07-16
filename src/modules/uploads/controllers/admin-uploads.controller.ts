@@ -6,7 +6,6 @@ import {
   Post,
   Req,
   UploadedFiles,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -19,9 +18,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { diskStorage } from 'multer';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 
 const MAX_FILES = 10;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB / file
@@ -35,13 +32,12 @@ const ALLOWED = /^image\/(jpeg|png|webp|gif|avif)$/;
  */
 @ApiTags('admin/uploads')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(CustomerRole.ADMIN)
 @Controller('admin/uploads')
 export class AdminUploadsController {
   constructor(private readonly config: ConfigService) {}
 
   @Post()
+  @RequirePermission('catalog.create', 'catalog.update')
   @ApiOperation({ summary: 'Upload up to 10 images (multipart field: files)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(

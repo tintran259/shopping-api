@@ -9,7 +9,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,9 +17,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole, VoucherCustomerScope } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import { VoucherCustomerScope } from '../../../common/enums';
 import { AdminVoucherQueryDto } from '../dto/admin-voucher-query.dto';
 import {
   CheckVoucherDto,
@@ -187,8 +185,7 @@ export class VouchersController {
 
   @Get()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.view')
   @ApiOperation({
     summary: '[admin] List vouchers — paginated, filterable by q/state',
   })
@@ -198,8 +195,7 @@ export class VouchersController {
 
   @Get('stats')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.view')
   @ApiOperation({
     summary: '[admin] Voucher counts by state, for the list page stat cards',
   })
@@ -209,8 +205,7 @@ export class VouchersController {
 
   @Get(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.view')
   @ApiOperation({
     summary: '[admin] Get a voucher by id (incl. scoping relations)',
   })
@@ -220,8 +215,7 @@ export class VouchersController {
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.create')
   @ApiOperation({ summary: '[admin] Create a voucher' })
   create(@Body() dto: CreateVoucherDto) {
     return this.vouchers.create(dto);
@@ -229,8 +223,7 @@ export class VouchersController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.update')
   @ApiOperation({ summary: '[admin] Update a voucher' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -242,8 +235,7 @@ export class VouchersController {
   @Delete(':id')
   @HttpCode(204)
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('vouchers.delete')
   @ApiOperation({ summary: '[admin] Delete a voucher' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.vouchers.remove(id);

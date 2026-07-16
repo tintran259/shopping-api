@@ -52,6 +52,14 @@ export class CustomersRepository {
     });
   }
 
+  /** RBAC: nạp kèm StaffRole (quyền + phạm vi chi nhánh) để dựng AuthContext. */
+  findByIdWithStaffRole(id: string): Promise<Customer | null> {
+    return this.repo.findOne({
+      where: { id },
+      relations: { staffRole: true },
+    });
+  }
+
   /** Back-office list — real customers only (never staff/admin accounts),
    *  filter/search/sort/paginate all server-side. */
   async searchAdmin(

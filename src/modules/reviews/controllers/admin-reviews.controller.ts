@@ -6,12 +6,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { AdminReviewQueryDto } from '../dto/admin-review-query.dto';
 import { UpdateReviewStatusDto } from '../dto/update-review-status.dto';
 import { ReviewsService } from '../services/reviews.service';
@@ -20,13 +17,12 @@ import { ReviewsService } from '../services/reviews.service';
  *  the class level). Public read/submit stay on `ReviewsController`. */
 @ApiTags('admin/reviews')
 @ApiBearerAuth()
-@UseGuards(RolesGuard)
-@Roles(CustomerRole.ADMIN)
 @Controller('admin/reviews')
 export class AdminReviewsController {
   constructor(private readonly reviews: ReviewsService) {}
 
   @Get()
+  @RequirePermission('reviews.view')
   @ApiOperation({
     summary: 'List reviews — filter by status, search (q), paginated',
   })
@@ -35,6 +31,7 @@ export class AdminReviewsController {
   }
 
   @Patch(':id/status')
+  @RequirePermission('reviews.update')
   @ApiOperation({ summary: 'Approve (published) or hide (rejected) a review' })
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,

@@ -156,7 +156,8 @@ export class ProductQueryDto extends PaginationQueryDto {
   status?: ProductStatus;
 
   @ApiPropertyOptional({
-    description: 'Sort, e.g. "createdAt:DESC" | "basePrice:ASC" | "expiryDate:ASC"',
+    description:
+      'Sort, e.g. "createdAt:DESC" | "basePrice:ASC" | "expiryDate:ASC"',
   })
   @IsOptional()
   @IsString()

@@ -1,11 +1,20 @@
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
-import { Column, Entity, Index, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import {
   CustomerRole,
   CustomerStatus,
   CustomerType,
 } from '../../../common/enums';
+import { StaffRole } from '../../roles/entities/staff-role.entity';
 import { Address } from './address.entity';
 import { B2bProfile } from './b2b-profile.entity';
 
@@ -55,6 +64,16 @@ export class Customer extends BaseEntity {
   @ApiProperty({ required: false, format: 'uuid' })
   @Column({ name: 'default_branch_id', type: 'uuid', nullable: true })
   defaultBranchId?: string;
+
+  // Vai trò nhân viên (RBAC) — bắt buộc với tài khoản `admin` (quyết định
+  // quyền + chi nhánh được phép), null với `customer`/`super_admin`.
+  @ApiProperty({ required: false, format: 'uuid' })
+  @Column({ name: 'staff_role_id', type: 'uuid', nullable: true })
+  staffRoleId?: string;
+
+  @ManyToOne(() => StaffRole, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'staff_role_id' })
+  staffRole?: StaffRole;
 
   @OneToMany(() => Address, (address) => address.customer)
   addresses: Address[];

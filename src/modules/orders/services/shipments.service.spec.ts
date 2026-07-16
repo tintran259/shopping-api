@@ -228,20 +228,29 @@ describe('ShipmentsService', () => {
     });
 
     it('maps post-handover problems (GHN lost, GHTK -1) to PROBLEM and stamps problemAt', async () => {
-      const ghn = makeShipment({ trackingNo: 'GHN123', status: ShipmentStatus.SHIPPED });
+      const ghn = makeShipment({
+        trackingNo: 'GHN123',
+        status: ShipmentStatus.SHIPPED,
+      });
       shipments.findByTrackingNo.mockResolvedValue(ghn);
       await service.handleCarrierUpdate('GHN123', 'lost', GHN_STATUS_MAP);
       expect(ghn.status).toBe(ShipmentStatus.PROBLEM);
       expect(ghn.problemAt).toBeInstanceOf(Date);
 
-      const ghtk = makeShipment({ trackingNo: 'GHTK-1', status: ShipmentStatus.PENDING });
+      const ghtk = makeShipment({
+        trackingNo: 'GHTK-1',
+        status: ShipmentStatus.PENDING,
+      });
       shipments.findByTrackingNo.mockResolvedValue(ghtk);
       await service.handleCarrierUpdate('GHTK-1', '-1', GHTK_STATUS_MAP);
       expect(ghtk.status).toBe(ShipmentStatus.PROBLEM);
     });
 
     it('maps a pre-handover pickup failure (GHTK "7") to PICKUP_FAILED, not PROBLEM', async () => {
-      const ghtk = makeShipment({ trackingNo: 'GHTK7', status: ShipmentStatus.PENDING });
+      const ghtk = makeShipment({
+        trackingNo: 'GHTK7',
+        status: ShipmentStatus.PENDING,
+      });
       shipments.findByTrackingNo.mockResolvedValue(ghtk);
       await service.handleCarrierUpdate('GHTK7', '7', GHTK_STATUS_MAP);
       expect(ghtk.status).toBe(ShipmentStatus.PICKUP_FAILED);
@@ -255,7 +264,11 @@ describe('ShipmentsService', () => {
       });
       shipments.findByTrackingNo.mockResolvedValue(existing);
 
-      await service.handleCarrierUpdate('GHN123', 'unknown_code', GHN_STATUS_MAP);
+      await service.handleCarrierUpdate(
+        'GHN123',
+        'unknown_code',
+        GHN_STATUS_MAP,
+      );
 
       expect(existing.status).toBe(ShipmentStatus.SHIPPED); // unchanged
       expect(existing.carrierStatusRaw).toBe('unknown_code'); // still recorded
@@ -294,7 +307,11 @@ describe('ShipmentsService', () => {
         status: ShipmentStatus.SHIPPED,
       });
       shipments.findByTrackingNo.mockResolvedValue(ghn);
-      await service.handleCarrierUpdate('GHN123', 'transporting', GHN_STATUS_MAP);
+      await service.handleCarrierUpdate(
+        'GHN123',
+        'transporting',
+        GHN_STATUS_MAP,
+      );
       expect(ghn.status).toBe(ShipmentStatus.IN_TRANSIT);
       expect(ghn.inTransitAt).toBeInstanceOf(Date);
     });

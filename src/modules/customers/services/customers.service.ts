@@ -33,6 +33,8 @@ export class CustomersService {
     phone?: string;
     type?: CustomerType;
     role?: CustomerRole;
+    /** RBAC: gán StaffRole ngay khi tạo (dùng cho tài khoản admin). */
+    staffRoleId?: string;
   }): Promise<Customer> {
     const email = data.email.toLowerCase().trim();
     if (await this.customers.findByEmail(email)) {
@@ -46,6 +48,7 @@ export class CustomersService {
       phone: data.phone,
       type: data.type ?? CustomerType.INDIVIDUAL,
       role: data.role ?? CustomerRole.CUSTOMER,
+      staffRoleId: data.staffRoleId,
     });
     return this.customers.save(customer);
   }
@@ -58,6 +61,11 @@ export class CustomersService {
     const customer = await this.customers.findById(id);
     if (!customer) throw new NotFoundException('Customer not found');
     return customer;
+  }
+
+  /** RBAC: customer kèm StaffRole (quyền + chi nhánh). Null nếu không tồn tại. */
+  findByIdWithStaffRole(id: string): Promise<Customer | null> {
+    return this.customers.findByIdWithStaffRole(id);
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto): Promise<Customer> {

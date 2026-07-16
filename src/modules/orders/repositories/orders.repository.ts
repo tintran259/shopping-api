@@ -53,6 +53,8 @@ export class OrdersRepository {
       paymentStatus?: PaymentStatus;
       shipmentStatus?: ShipmentStatus;
       q?: string;
+      /** RBAC: giới hạn theo chi nhánh được phép (undefined = mọi CN). */
+      allowedBranchIds?: string[];
     },
     sort: { by: string; order: 'ASC' | 'DESC' },
     skip: number,
@@ -60,6 +62,16 @@ export class OrdersRepository {
   ): Promise<[Order[], number]> {
     const qb = this.repo.createQueryBuilder('o');
 
+    if (filters.allowedBranchIds) {
+      // Rỗng ⇒ không có chi nhánh nào ⇒ không đơn nào.
+      if (filters.allowedBranchIds.length === 0) {
+        qb.andWhere('1 = 0');
+      } else {
+        qb.andWhere('o.branchId IN (:...allowedBranchIds)', {
+          allowedBranchIds: filters.allowedBranchIds,
+        });
+      }
+    }
     if (filters.branchId) {
       qb.andWhere('o.branchId = :branchId', { branchId: filters.branchId });
     }
@@ -113,10 +125,20 @@ export class OrdersRepository {
   /** Fresh, filtered query builder shared by every `summary()` aggregate below. */
   private summaryQuery(filters: {
     branchId?: string;
+    allowedBranchIds?: string[];
     dateFrom?: Date;
     dateTo?: Date;
   }) {
     const qb = this.repo.createQueryBuilder('o');
+    if (filters.allowedBranchIds) {
+      if (filters.allowedBranchIds.length === 0) {
+        qb.andWhere('1 = 0');
+      } else {
+        qb.andWhere('o.branchId IN (:...allowedBranchIds)', {
+          allowedBranchIds: filters.allowedBranchIds,
+        });
+      }
+    }
     if (filters.branchId) {
       qb.andWhere('o.branchId = :branchId', { branchId: filters.branchId });
     }
@@ -135,6 +157,7 @@ export class OrdersRepository {
    *  paginated list, capped at `limit`). */
   async summary(filters: {
     branchId?: string;
+    allowedBranchIds?: string[];
     dateFrom?: Date;
     dateTo?: Date;
   }) {

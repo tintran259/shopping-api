@@ -5,13 +5,10 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
-import { Roles } from '../../../common/decorators/roles.decorator';
-import { CustomerRole } from '../../../common/enums';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { LocationsService } from '../services/locations.service';
 
 /** Administrative data is effectively static — cache hard at the edge/browser. */
@@ -40,8 +37,7 @@ export class LocationsController {
 
   @Post('sync')
   @ApiBearerAuth()
-  @UseGuards(RolesGuard)
-  @Roles(CustomerRole.ADMIN)
+  @RequirePermission('inventory.update')
   @ApiOperation({
     summary: '[admin] Import latest administrative data into the DB',
   })
