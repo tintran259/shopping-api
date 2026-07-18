@@ -13,6 +13,7 @@ import { RequirePermission } from '../../../common/decorators/require-permission
 import { AdminCustomerQueryDto } from '../dto/admin-customer-query.dto';
 import { CreateB2bCustomerDto } from '../dto/create-b2b-customer.dto';
 import { UpdateCustomerStatusDto } from '../dto/update-customer-status.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { CustomersService } from '../services/customers.service';
 
 /** Back-office customer management (B2C/B2B) — every route requires an admin
@@ -50,6 +51,16 @@ export class AdminCustomersController {
   })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.customers.findByIdAdmin(id);
+  }
+
+  @Patch(':id')
+  @RequirePermission('customers.update')
+  @ApiOperation({ summary: 'Edit a customer profile (name, phone)' })
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.customers.updateProfileAdmin(id, dto);
   }
 
   @Patch(':id/status')

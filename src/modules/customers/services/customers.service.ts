@@ -74,6 +74,15 @@ export class CustomersService {
     return this.customers.save(customer);
   }
 
+  /** [admin] Sửa hồ sơ khách (tên/điện thoại) rồi trả bản chi tiết đầy đủ
+   *  (kèm địa chỉ + hồ sơ B2B) để FE cập nhật cache detail nhất quán. */
+  async updateProfileAdmin(id: string, dto: UpdateProfileDto): Promise<Customer> {
+    const customer = await this.findById(id);
+    Object.assign(customer, dto);
+    await this.customers.save(customer);
+    return this.findByIdAdmin(id);
+  }
+
   /** [admin] Paginated customer list — filter/search/sort server-side. */
   async findAllAdmin(
     query: AdminCustomerQueryDto,
