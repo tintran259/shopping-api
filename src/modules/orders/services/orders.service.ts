@@ -2,9 +2,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AdminNotificationsService } from '../../admin-notifications/admin-notifications.service';
+import { BranchesService } from '../../branches/services/branches.service';
 import { BranchScopeCtx } from '../../../common/decorators/branch-scope.decorator';
 import { PaginatedResult } from '../../../common/dto/paginated-result';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
@@ -92,7 +95,24 @@ export class OrdersService {
     private readonly inventory: InventoryService,
     private readonly locations: LocationsService,
     private readonly shipments: ShipmentsRepository,
+    private readonly branches: BranchesService,
+    private readonly adminNotifications: AdminNotificationsService,
   ) {}
+
+  private readonly logger = new Logger(OrdersService.name);
+
+  /** Bắn thông báo BO cho đơn storefront mới (fire-and-forget, không chặn/đánh
+   *  hỏng việc tạo đơn nếu notification lỗi). */
+  private async notifyNewOrder(order: Order): Promise<void> {
+    try {
+      const branch = await this.branches.findOne(order.branchId);
+      await this.adminNotifications.notifyOrderCreated(order, branch.name);
+    } catch (err) {
+      this.logger.error(
+        `Thông báo đơn mới ${order.code} thất bại: ${String(err)}`,
+      );
+    }
+  }
 
   /** Logged-in checkout — items come from the customer's active server cart. */
   async checkout(customerId: string, dto: CheckoutDto): Promise<Order> {
@@ -223,7 +243,7 @@ export class OrdersService {
 
     const grandTotal = subtotal - discount + shippingFee;
 
-    return this.dataSource.transaction(async (manager) => {
+    const order = await this.dataSource.transaction(async (manager) => {
       for (const item of lineItems) {
         await this.inventory.reserve(
           manager,
@@ -283,6 +303,12 @@ export class OrdersService {
       if (cartId) await this.cart.markConverted(cartId);
       return order;
     });
+
+    // Chỉ đơn khách tự đặt (storefront) mới sinh thông báo BO — đơn admin tạo
+    // tay trên BO thì bỏ qua (người tạo đã biết). Fire-and-forget sau commit.
+    if (channel === OrderChannel.STOREFRONT) void this.notifyNewOrder(order);
+
+    return order;
   }
 
   async findMine(customerId: string, query: PaginationQueryDto) {

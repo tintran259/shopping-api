@@ -92,6 +92,23 @@ export enum OrderChannel {
   ADMIN = 'admin',
 }
 
+/**
+ * Loại thông báo Back Office. Hiện chỉ `ORDER` được triển khai; các loại còn lại
+ * khai báo sẵn để Settings + kiến trúc mở rộng cho tương lai (mỗi loại bật/tắt
+ * độc lập). Thêm loại mới = thêm builder + recipient resolver trong
+ * `AdminNotificationsService`, không đụng phần lõi.
+ */
+export enum NotificationType {
+  ORDER = 'order',
+  COMPLAINT = 'complaint',
+  REFUND = 'refund',
+  INVENTORY = 'inventory',
+  PROMOTION = 'promotion',
+  CUSTOMER = 'customer',
+  PRODUCT = 'product',
+  SYSTEM = 'system',
+}
+
 export enum ShipmentStatus {
   PENDING = 'pending', // chờ lấy hàng
   SHIPPED = 'shipped', // đã lấy hàng (carrier picked up / at first hub)

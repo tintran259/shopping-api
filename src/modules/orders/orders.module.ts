@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminNotificationsModule } from '../admin-notifications/admin-notifications.module';
 import { BranchesModule } from '../branches/branches.module';
 import { CartModule } from '../cart/cart.module';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -37,6 +38,7 @@ import { ShipmentsService } from './services/shipments.service';
     CustomersModule,
     BranchesModule,
     LocationsModule,
+    AdminNotificationsModule,
   ],
   controllers: [
     OrdersController,

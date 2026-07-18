@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import configuration from './config/configuration';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
+import { AdminNotificationsModule } from './modules/admin-notifications/admin-notifications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CartModule } from './modules/cart/cart.module';
@@ -56,6 +57,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     RolesModule,
     CmsModule,
     NotificationsModule,
+    AdminNotificationsModule,
     UploadsModule,
   ],
   providers: [
