@@ -25,6 +25,21 @@ export default () => ({
     secret: process.env.JWT_SECRET ?? 'change-me',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   },
+  /**
+   * CMS (Strapi) auto-login bridge. The BO opens the Strapi admin panel
+   * already authenticated: the API logs into Strapi with a shared service
+   * admin account (`CMS_BRIDGE_EMAIL`/`CMS_BRIDGE_PASSWORD`) and hands the BO
+   * the resulting admin JWT, which a public bridge page on the CMS origin
+   * (`ssoPath`) writes into the admin panel's localStorage. Token lifetime is
+   * controlled by Strapi's own `config/admin` `expiresIn` (set to 1 year),
+   * not here. Empty credentials ⇒ the endpoint returns 503 (feature disabled).
+   */
+  cms: {
+    url: process.env.CMS_URL ?? 'http://localhost:1337',
+    ssoPath: process.env.CMS_SSO_PATH ?? '/cms-sso',
+    bridgeEmail: process.env.CMS_BRIDGE_EMAIL ?? '',
+    bridgePassword: process.env.CMS_BRIDGE_PASSWORD ?? '',
+  },
   /** GHN (Giao Hàng Nhanh) shipping carrier API. Sandbox host by default —
    *  point GHN_BASE_URL at the production gateway once live. A branch without
    *  its own `ghnShopId` falls back to GHN_DEFAULT_SHOP_ID. */

@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CustomerStatus } from '../../../common/enums';
+import { CmsService } from '../../cms/cms.service';
 import { CustomersService } from '../../customers/services/customers.service';
 import { Customer } from '../../customers/entities/customer.entity';
 import { buildAuthContext } from '../auth-context';
@@ -13,6 +14,7 @@ export class AuthService {
   constructor(
     private readonly customers: CustomersService,
     private readonly jwt: JwtService,
+    private readonly cms: CmsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -43,17 +45,17 @@ export class AuthService {
     return this.buildProfile(customer);
   }
 
-  private buildAuthResponse(customer: Customer) {
+  private async buildAuthResponse(customer: Customer) {
     const accessToken = this.jwt.sign({
       sub: customer.id,
       email: customer.email,
       role: customer.role,
     });
-    return { accessToken, user: this.buildProfile(customer) };
+    return { accessToken, user: await this.buildProfile(customer) };
   }
 
   /** Hồ sơ + quyền hiệu lực (isSuperAdmin/permissions/allBranches/branchIds). */
-  private buildProfile(customer: Customer) {
+  private async buildProfile(customer: Customer) {
     const ctx = buildAuthContext(customer);
     return {
       id: customer.id,
@@ -68,6 +70,20 @@ export class AuthService {
       permissions: ctx.permissions,
       allBranches: ctx.allBranches,
       branchIds: ctx.branchIds,
+      // Token auto-login CMS kèm sẵn khi đăng nhập (chỉ cho user có quyền
+      // `cms.view` / super admin). Lỗi CMS KHÔNG được làm hỏng đăng nhập BO →
+      // nuốt lỗi, trả null; nav CMS sẽ tự xin lại token khi bấm.
+      cms: await this.buildCmsHandle(ctx.isSuperAdmin, ctx.permissions),
     };
+  }
+
+  private async buildCmsHandle(isSuperAdmin: boolean, permissions: string[]) {
+    if (!isSuperAdmin && !permissions.includes('cms.view')) return null;
+    try {
+      const { token, ssoUrl } = await this.cms.getLoginToken();
+      return { ssoUrl, token };
+    } catch {
+      return null;
+    }
   }
 }

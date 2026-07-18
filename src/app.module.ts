@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BranchesModule } from './modules/branches/branches.module';
 import { CartModule } from './modules/cart/cart.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CmsModule } from './modules/cms/cms.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -53,6 +54,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     WishlistModule,
     ReviewsModule,
     RolesModule,
+    CmsModule,
     NotificationsModule,
     UploadsModule,
   ],

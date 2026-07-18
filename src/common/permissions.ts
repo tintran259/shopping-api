@@ -20,6 +20,9 @@ export const PERMISSION_GROUPS = [
   { key: 'reviews', label: 'Đánh giá', actions: CRUD },
   { key: 'customers', label: 'Khách hàng', actions: CRUD },
   { key: 'dashboard', label: 'Tổng quan', actions: ['view'] as const },
+  // CMS (Strapi) chỉ có `.view` = được mở & auto-login vào admin CMS từ BO.
+  // Không có CRUD ở đây vì thao tác nội dung nằm bên trong chính CMS.
+  { key: 'cms', label: 'Nội dung (CMS)', actions: ['view'] as const },
 ] as const;
 
 /** Quyền có thể gán cho một role (danh sách phẳng). */
