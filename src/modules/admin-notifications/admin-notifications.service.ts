@@ -41,7 +41,7 @@ export class AdminNotificationsService {
 
   /** Đơn storefront mới → thông báo cho super admin + admin của chi nhánh đó. */
   async notifyOrderCreated(order: Order, branchName: string): Promise<void> {
-    const recipients = await this.resolveOrderRecipients(order.branchId);
+    const recipients = await this.resolveBranchRecipients(order.branchId);
     await this.dispatch(NotificationType.ORDER, recipients, {
       title: 'Đơn hàng mới',
       body: `Có đơn hàng mới #${order.code} tại ${branchName}`,
@@ -51,6 +51,32 @@ export class AdminNotificationsService {
         orderCode: order.code,
         branchId: order.branchId,
         branchName,
+      },
+    });
+  }
+
+  /**
+   * Đánh giá sản phẩm điểm thấp (≤2★) → cảnh báo super admin + admin chi nhánh
+   * của đơn (nếu review gắn đơn); review không gắn đơn thì chỉ super admin /
+   * admin "mọi chi nhánh". Click → trang Đánh giá để xử lý (duyệt/ẩn/liên hệ).
+   */
+  async notifyLowRating(params: {
+    reviewId: string;
+    productId: string;
+    productName: string;
+    rating: number;
+    branchId?: string;
+  }): Promise<void> {
+    const recipients = await this.resolveBranchRecipients(params.branchId);
+    await this.dispatch(NotificationType.REVIEW, recipients, {
+      title: 'Đánh giá thấp',
+      body: `Sản phẩm "${params.productName}" bị đánh giá ${params.rating}★`,
+      link: '/reviews',
+      data: {
+        reviewId: params.reviewId,
+        productId: params.productId,
+        rating: params.rating,
+        branchId: params.branchId,
       },
     });
   }
@@ -80,8 +106,12 @@ export class AdminNotificationsService {
     }
   }
 
-  /** Super admin (mọi chi nhánh) + admin được gán đúng chi nhánh của đơn. */
-  private async resolveOrderRecipients(branchId: string): Promise<string[]> {
+  /**
+   * Super admin + admin "mọi chi nhánh" luôn nhận; admin phạm vi chi nhánh chỉ
+   * nhận khi `branchId` khớp. `branchId` undefined ⇒ chỉ super admin / mọi-chi-nhánh
+   * (sự kiện không gắn chi nhánh cụ thể, vd review không kèm đơn).
+   */
+  private async resolveBranchRecipients(branchId?: string): Promise<string[]> {
     const users = await this.customers.find({
       where: [
         { role: CustomerRole.ADMIN, status: CustomerStatus.ACTIVE },
@@ -95,7 +125,8 @@ export class AdminNotificationsService {
         (u) =>
           u.role === CustomerRole.SUPER_ADMIN ||
           u.staffRole?.allBranches ||
-          (u.staffRole?.branchIds ?? []).includes(branchId),
+          (branchId != null &&
+            (u.staffRole?.branchIds ?? []).includes(branchId)),
       )
       .map((u) => u.id);
   }

@@ -366,6 +366,16 @@ export class ProductsService {
     return variant;
   }
 
+  /** Record a completed sale: bump every product's `soldCount` by the quantity
+   *  ordered. Called once when an order transitions to DELIVERED (the caller
+   *  guards against double-counting). Optionally joins an existing transaction. */
+  async recordSaleForOrder(
+    orderId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    await this.products.incrementSoldCountForOrder(orderId, manager);
+  }
+
   private async replaceImages(
     manager: EntityManager,
     productId: string,

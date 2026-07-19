@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BranchesModule } from '../branches/branches.module';
+import { ReviewsModule } from '../reviews/reviews.module';
 import { AdminProductsController } from './controllers/admin-products.controller';
 import { BrandsController } from './controllers/brands.controller';
 import { CategoryAttributesController } from './controllers/category-attributes.controller';
@@ -42,6 +43,7 @@ import { ProductsService } from './services/products.service';
       PriceListItem,
     ]),
     BranchesModule,
+    ReviewsModule,
   ],
   controllers: [
     BrandsController,

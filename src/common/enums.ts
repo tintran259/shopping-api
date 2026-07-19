@@ -100,6 +100,7 @@ export enum OrderChannel {
  */
 export enum NotificationType {
   ORDER = 'order',
+  REVIEW = 'review',
   COMPLAINT = 'complaint',
   REFUND = 'refund',
   INVENTORY = 'inventory',

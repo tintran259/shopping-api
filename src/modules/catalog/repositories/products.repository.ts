@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { ProductStatus } from '../../../common/enums';
 import { ProductQueryDto, parseAttrs } from '../dto/product.dto';
 import { ProductVariant } from '../entities/product-variant.entity';
@@ -62,6 +62,30 @@ export class ProductsRepository {
 
   findById(id: string): Promise<Product | null> {
     return this.repo.findOne({ where: { id }, relations: FULL_RELATIONS });
+  }
+
+  /** Add each order line's quantity to its product's `sold_count`, in one
+   *  statement (join order_items → product_variants → products). Runs on the
+   *  given manager when called inside a transaction, else standalone. */
+  async incrementSoldCountForOrder(
+    orderId: string,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const runner = manager ?? this.repo.manager;
+    await runner.query(
+      `UPDATE products p
+          SET sold_count = p.sold_count + agg.qty
+         FROM (
+           SELECT pv.product_id AS product_id, SUM(oi.quantity)::int AS qty
+             FROM order_items oi
+             -- order_items.variant_id is varchar, product_variants.id is uuid
+             JOIN product_variants pv ON pv.id = oi.variant_id::uuid
+            WHERE oi.order_id = $1
+            GROUP BY pv.product_id
+         ) agg
+        WHERE p.id = agg.product_id`,
+      [orderId],
+    );
   }
 
   findByIds(ids: string[]): Promise<Product[]> {

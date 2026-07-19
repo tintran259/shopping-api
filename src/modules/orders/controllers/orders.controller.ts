@@ -19,6 +19,7 @@ import {
 } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+import { SubmitOrderReviewDto } from '../../reviews/dto/review.dto';
 import { CheckoutDto, GuestCheckoutDto } from '../dto/checkout.dto';
 import { OrdersService } from '../services/orders.service';
 
@@ -75,5 +76,18 @@ export class OrdersController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.orders.cancelForUser(user.id, id);
+  }
+
+  @Post(':code/reviews')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Review a delivered order (creates one review per product)',
+  })
+  submitReview(
+    @CurrentUser() user: AuthUser,
+    @Param('code') code: string,
+    @Body() dto: SubmitOrderReviewDto,
+  ) {
+    return this.orders.createOrderReviews(user.id, code, dto);
   }
 }

@@ -109,6 +109,12 @@ export class Product extends BaseEntity {
   @Column({ name: 'rating_count', default: 0 })
   ratingCount: number;
 
+  // Tổng số lượng đã bán — cộng dồn khi đơn chuyển sang DELIVERED (xem
+  // OrdersService). Dùng cho nhãn "đã bán 128" trên storefront.
+  @ApiProperty({ default: 0 })
+  @Column({ name: 'sold_count', default: 0 })
+  soldCount: number;
+
   @ApiProperty({ required: false, type: 'object', additionalProperties: true })
   @Column({ type: 'jsonb', nullable: true })
   seo?: Record<string, unknown>;

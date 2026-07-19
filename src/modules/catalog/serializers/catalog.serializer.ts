@@ -54,6 +54,7 @@ export interface ProductSummaryDto {
   priceVaries: boolean;
   brand: { id: string; slug: string; name: string } | null;
   rating?: { average: number; count: number };
+  soldCount: number;
   flags: Record<string, boolean>;
   inStock: boolean;
   branchStock: BranchStockDto[];
@@ -189,6 +190,7 @@ export function toProductSummary(
       p.ratingCount > 0
         ? { average: num(p.ratingAvg), count: p.ratingCount }
         : undefined,
+    soldCount: p.soldCount ?? 0,
     flags: (p.flags ?? {}) as Record<string, boolean>,
     inStock: branchStock.length
       ? branchStock.some((b) => b.inStock)

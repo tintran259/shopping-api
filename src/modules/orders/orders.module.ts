@@ -7,6 +7,7 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { CustomersModule } from '../customers/customers.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { ReviewsModule } from '../reviews/reviews.module';
 import { VouchersModule } from '../vouchers/vouchers.module';
 import { AdminOrdersController } from './controllers/admin-orders.controller';
 import { GhnWebhookController } from './controllers/ghn-webhook.controller';
@@ -39,6 +40,7 @@ import { ShipmentsService } from './services/shipments.service';
     BranchesModule,
     LocationsModule,
     AdminNotificationsModule,
+    ReviewsModule,
   ],
   controllers: [
     OrdersController,

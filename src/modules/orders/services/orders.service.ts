@@ -27,6 +27,9 @@ import { ProductsService } from '../../catalog/services/products.service';
 import { AddressesService } from '../../customers/services/addresses.service';
 import { LocationsService } from '../../locations/services/locations.service';
 import { PaymentsService } from '../../payments/services/payments.service';
+import { SubmitOrderReviewDto } from '../../reviews/dto/review.dto';
+import { Review } from '../../reviews/entities/review.entity';
+import { ReviewsService } from '../../reviews/services/reviews.service';
 import { VouchersService } from '../../vouchers/services/vouchers.service';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
@@ -82,6 +85,9 @@ function allowedBranchIds(scope?: BranchScopeCtx): string[] | undefined {
   return scope && !scope.allBranches ? scope.branchIds : undefined;
 }
 
+/** Đánh giá ≤ ngưỡng này ⇒ cảnh báo BO (thông báo "Đánh giá thấp"). */
+const LOW_RATING_THRESHOLD = 2;
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -97,6 +103,7 @@ export class OrdersService {
     private readonly shipments: ShipmentsRepository,
     private readonly branches: BranchesService,
     private readonly adminNotifications: AdminNotificationsService,
+    private readonly reviews: ReviewsService,
   ) {}
 
   private readonly logger = new Logger(OrdersService.name);
@@ -375,6 +382,93 @@ export class OrdersService {
     return order;
   }
 
+  /** Storefront "review my order" (by order code): the customer must own the
+   *  order and it must be DELIVERED; one review is created (PENDING) per product
+   *  in the order, marked verified via the linked order. One-review-per-order is
+   *  enforced in {@link ReviewsService.submitFromOrder}. */
+  async createOrderReviews(
+    customerId: string,
+    code: string,
+    dto: SubmitOrderReviewDto,
+  ): Promise<Review[]> {
+    const order = await this.orders.findByCode(code);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.customerId !== customerId) throw new ForbiddenException();
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException(
+        'Chỉ có thể đánh giá đơn hàng đã giao thành công.',
+      );
+    }
+
+    // order_items only snapshot variant_id — resolve each to its product, then
+    // dedupe (multiple variants of one product ⇒ a single review for it).
+    // Mỗi order item (biến thể) → 1 review riêng (KHÔNG gộp theo product).
+    // order_items chỉ snapshot variant_id/variant_title → phân giải productId +
+    // tên sản phẩm cho từng dòng, giữ nguyên thứ tự/biến thể.
+    // Build a map variantId → per-item review data from the DTO.
+    const reviewByVariant = new Map(dto.items.map((i) => [i.variantId, i]));
+
+    // Resolve productId for each order item; skip items the customer chose not
+    // to rate (not present in the DTO).
+    const allItems = await Promise.all(
+      order.items.map(async (item) => {
+        const variant = await this.products.getVariantOrFail(item.variantId);
+        return {
+          variantId: item.variantId,
+          productId: variant.productId,
+          variantTitle: item.variantTitle,
+          productName: variant.product?.name ?? item.productName,
+        };
+      }),
+    );
+
+    // Only submit reviews for items the customer actually rated.
+    const ratedItems = allItems
+      .filter((l) => reviewByVariant.has(l.variantId))
+      .map((l) => {
+        const d = reviewByVariant.get(l.variantId)!;
+        return {
+          variantId: l.variantId,
+          productId: l.productId,
+          variantTitle: l.variantTitle,
+          rating: d.rating,
+          tags: d.tags,
+          comment: d.comment,
+          imageUrls: d.imageUrls,
+        };
+      });
+
+    if (!ratedItems.length) {
+      throw new BadRequestException('Không có sản phẩm nào được đánh giá.');
+    }
+
+    const reviews = await this.reviews.submitFromOrder({
+      orderId: order.id,
+      customerId,
+      items: ratedItems,
+    });
+
+    // Notify BO for each low-rated item (≤2★) — fire-and-forget.
+    const nameByVariant = new Map(allItems.map((l) => [l.variantId, l.productName]));
+    for (const review of reviews) {
+      if (review.rating <= LOW_RATING_THRESHOLD) {
+        void this.adminNotifications
+          .notifyLowRating({
+            reviewId: review.id,
+            productId: review.productId,
+            productName: nameByVariant.get(review.variantId ?? '') ?? 'Sản phẩm',
+            rating: review.rating,
+            branchId: order.branchId,
+          })
+          .catch((err) =>
+            this.logger.error(`Thông báo đánh giá thấp thất bại: ${String(err)}`),
+          );
+      }
+    }
+
+    return reviews;
+  }
+
   /** Guest order tracking by code + phone. */
   async track(code: string, phone: string): Promise<Order> {
     const order = await this.orders.findByCode(code);
@@ -408,6 +502,7 @@ export class OrdersService {
 
   async updateStatus(id: string, status: OrderStatus): Promise<Order> {
     const order = await this.findOne(id);
+    const previousStatus = order.status;
 
     if (
       status === OrderStatus.CANCELLED &&
@@ -436,7 +531,13 @@ export class OrdersService {
       if (order.paymentMethodCode === PaymentMethodCode.COD) {
         order.paymentStatus = PaymentStatus.PAID; // COD captured on delivery
       }
-      return this.commitStock(order); // reserve → physical deduction
+      const delivered = await this.commitStock(order); // reserve → physical deduction
+      // Count the sale exactly once — only on the first crossing into DELIVERED
+      // (a re-issued DELIVERED transition must not double-bump sold_count).
+      if (previousStatus !== OrderStatus.DELIVERED) {
+        await this.products.recordSaleForOrder(order.id);
+      }
+      return delivered;
     }
     // Shipment creation via a carrier's real API (GHN/GHTK) is a separate,
     // explicit admin action once the order reaches PROCESSING — see

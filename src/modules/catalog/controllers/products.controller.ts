@@ -1,6 +1,8 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
+import { ProductReviewsQueryDto } from '../../reviews/dto/review.dto';
+import { ReviewsService } from '../../reviews/services/reviews.service';
 import { ProductQueryDto } from '../dto/product.dto';
 import { ProductsService } from '../services/products.service';
 
@@ -12,7 +14,10 @@ import { ProductsService } from '../services/products.service';
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly products: ProductsService) {}
+  constructor(
+    private readonly products: ProductsService,
+    private readonly reviews: ReviewsService,
+  ) {}
 
   @Public()
   @Get()
@@ -28,6 +33,21 @@ export class ProductsController {
   @ApiOperation({ summary: 'Get a product by slug — storefront shape' })
   findBySlug(@Param('slug') slug: string) {
     return this.products.detailBySlug(slug);
+  }
+
+  @Public()
+  @Get(':slug/reviews')
+  @ApiOperation({
+    summary: 'Published reviews for a product (paginated) + rating aggregate',
+  })
+  async listReviews(
+    @Param('slug') slug: string,
+    @Query() query: ProductReviewsQueryDto,
+  ) {
+    // Resolve the slug here (404s a hidden/absent product) so the reviews
+    // module stays keyed on productId and never learns about slugs.
+    const product = await this.products.findBySlug(slug);
+    return this.reviews.getProductReviews(product.id, query.page, query.limit, query.star);
   }
 
   @Public()
