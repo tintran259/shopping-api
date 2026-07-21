@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { InventoryStatus, ProductStatus } from '../../../common/enums';
 import { ProductVariant } from '../../catalog/entities/product-variant.entity';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import { UpsertInventoryDto } from '../dto/inventory.dto';
 import { Inventory } from '../entities/inventory.entity';
 import { InventoryRepository } from '../repositories/inventory.repository';
@@ -27,6 +28,7 @@ export class InventoryService {
     private readonly inventory: InventoryRepository,
     @InjectRepository(ProductVariant)
     private readonly variants: Repository<ProductVariant>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Per-branch availability for a variant — powers the FE `BranchStock[]`. */
@@ -59,6 +61,9 @@ export class InventoryService {
    * a stray PUT re-introduce quantity would silently reopen a product the
    * admin just took off sale. The admin must change the product's status
    * first; this is why the message says so instead of just rejecting.
+   *
+   * After a successful restock (quantity 0 → >0), fires back-in-stock
+   * notifications to waiting subscribers (fire-and-forget).
    */
   async upsert(dto: UpsertInventoryDto): Promise<Inventory> {
     const variant = await this.variants.findOne({
@@ -82,6 +87,10 @@ export class InventoryService {
         branchId: dto.branchId,
         variantId: dto.variantId,
       });
+
+    // Snapshot the previous quantity before mutation to detect a 0 → >0 restock.
+    const prevQuantity: number = record.quantity ?? 0;
+
     record.quantity = dto.quantity;
     if (dto.status) {
       record.status = dto.status;
@@ -91,7 +100,19 @@ export class InventoryService {
           ? InventoryStatus.IN_STOCK
           : InventoryStatus.OUT_OF_STOCK;
     }
-    return this.inventory.save(record);
+    const saved = await this.inventory.save(record);
+
+    // Notify subscribers when an admin restocks a previously empty shelf.
+    if (prevQuantity === 0 && saved.quantity > 0) {
+      this.notifications
+        .dispatchBackInStock(dto.variantId, dto.branchId, {
+          productName: variant.product.name,
+          productSlug: variant.product.slug,
+        })
+        .catch(() => undefined);
+    }
+
+    return saved;
   }
 
   /**

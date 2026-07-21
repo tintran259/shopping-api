@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { LocationsModule } from '../locations/locations.module';
 import { AdminCustomersController } from './controllers/admin-customers.controller';
 import { CustomersController } from './controllers/customers.controller';
@@ -15,6 +16,7 @@ import { CustomersService } from './services/customers.service';
   imports: [
     TypeOrmModule.forFeature([Customer, Address, B2bProfile]),
     LocationsModule,
+    NotificationsModule,
   ],
   controllers: [CustomersController, AdminCustomersController],
   providers: [

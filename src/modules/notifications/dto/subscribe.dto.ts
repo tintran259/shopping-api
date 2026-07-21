@@ -8,4 +8,8 @@ export class SubscribeBackInStockDto {
   @IsOptional()
   @IsUUID()
   branchId?: string;
+  @ApiPropertyOptional({ format: 'uuid', description: 'Set when the subscriber has an account' })
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
 }

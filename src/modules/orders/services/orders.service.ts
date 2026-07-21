@@ -8,6 +8,7 @@ import {
 import { DataSource } from 'typeorm';
 import { AdminNotificationsService } from '../../admin-notifications/admin-notifications.service';
 import { BranchesService } from '../../branches/services/branches.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import { BranchScopeCtx } from '../../../common/decorators/branch-scope.decorator';
 import { PaginatedResult } from '../../../common/dto/paginated-result';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
@@ -104,6 +105,7 @@ export class OrdersService {
     private readonly branches: BranchesService,
     private readonly adminNotifications: AdminNotificationsService,
     private readonly reviews: ReviewsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private readonly logger = new Logger(OrdersService.name);
@@ -645,14 +647,26 @@ export class OrdersService {
 
   /** Return stock on cancel: release the hold (if still reserved) or restock
    *  (if already committed). Idempotent (no-op once released). Also reverses any
-   *  voucher redemption tied to this order, freeing its usage slot back up. */
-  private cancelStock(order: Order): Promise<Order> {
-    return this.dataSource.transaction(async (manager) => {
+   *  voucher redemption tied to this order, freeing its usage slot back up.
+   *
+   *  When stock is physically returned (COMMITTED case), fires back-in-stock
+   *  notifications after the transaction commits — fire-and-forget so a dispatch
+   *  failure never rolls back or breaks the cancel. */
+  private async cancelStock(order: Order): Promise<Order> {
+    // Snapshot before the transaction mutates stockStatus.
+    const wasCommitted = order.stockStatus === OrderStockStatus.COMMITTED;
+    const branchId = order.branchId;
+    const restockedItems = order.items.map((i) => ({
+      variantId: i.variantId,
+      productName: i.productName,
+    }));
+
+    const saved = await this.dataSource.transaction(async (manager) => {
       if (order.stockStatus === OrderStockStatus.RESERVED) {
         for (const item of order.items) {
           await this.inventory.release(
             manager,
-            order.branchId,
+            branchId,
             item.variantId,
             item.quantity,
           );
@@ -662,7 +676,7 @@ export class OrdersService {
         for (const item of order.items) {
           await this.inventory.restock(
             manager,
-            order.branchId,
+            branchId,
             item.variantId,
             item.quantity,
           );
@@ -672,6 +686,19 @@ export class OrdersService {
       await this.vouchers.unredeem(manager, order.id);
       return manager.getRepository(Order).save(order);
     });
+
+    // Notify subscribers only after the transaction has committed (physical restock).
+    if (wasCommitted) {
+      for (const item of restockedItems) {
+        this.notifications
+          .dispatchBackInStock(item.variantId, branchId, {
+            productName: item.productName,
+          })
+          .catch(() => undefined);
+      }
+    }
+
+    return saved;
   }
 
   /** Pre-flight availability check with a per-item message (available = qty − reserved). */

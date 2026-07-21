@@ -61,4 +61,16 @@ export default () => ({
      *  alongside the token. */
     clientSource: process.env.GHTK_CLIENT_SOURCE ?? '',
   },
+  /** Resend email delivery. Empty API key → mock mode (logs only, no real send). */
+  resend: {
+    apiKey: process.env.RESEND_API_KEY ?? '',
+  },
+  mail: {
+    /** "From" address for transactional emails (must be a verified Resend sender). */
+    from: process.env.MAIL_FROM ?? 'thongbao@example.com',
+  },
+  /** Public storefront origin — used to build product links inside emails. */
+  storefront: {
+    url: process.env.STOREFRONT_URL ?? 'http://localhost:3001',
+  },
 });

@@ -11,6 +11,7 @@ import {
   CustomerStatus,
   CustomerType,
 } from '../../../common/enums';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import { AdminCustomerQueryDto } from '../dto/admin-customer-query.dto';
 import { CreateB2bCustomerDto } from '../dto/create-b2b-customer.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
@@ -23,6 +24,7 @@ export class CustomersService {
   constructor(
     private readonly customers: CustomersRepository,
     private readonly dataSource: DataSource,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(data: {
@@ -40,17 +42,24 @@ export class CustomersService {
     if (await this.customers.findByEmail(email)) {
       throw new ConflictException('Email already registered');
     }
-    const customer = this.customers.create({
-      email,
-      passwordHash: await bcrypt.hash(data.password, 10),
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phone: data.phone,
-      type: data.type ?? CustomerType.INDIVIDUAL,
-      role: data.role ?? CustomerRole.CUSTOMER,
-      staffRoleId: data.staffRoleId,
-    });
-    return this.customers.save(customer);
+    const customer = await this.customers.save(
+      this.customers.create({
+        email,
+        passwordHash: await bcrypt.hash(data.password, 10),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        type: data.type ?? CustomerType.INDIVIDUAL,
+        role: data.role ?? CustomerRole.CUSTOMER,
+        staffRoleId: data.staffRoleId,
+      }),
+    );
+
+    // Link any pending guest back-in-stock subscriptions that used this email.
+    // Fire-and-forget: a failure here must never break registration.
+    this.notifications.claimByEmail(email, customer.id).catch(() => undefined);
+
+    return customer;
   }
 
   findByEmailWithSecret(email: string): Promise<Customer | null> {
@@ -164,6 +173,11 @@ export class CustomersService {
       throw error;
     }
 
-    return this.findByIdAdmin(savedId);
+    const saved = await this.findByIdAdmin(savedId);
+
+    // Link any pending guest back-in-stock subscriptions that used this email.
+    this.notifications.claimByEmail(email, savedId).catch(() => undefined);
+
+    return saved;
   }
 }
