@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +12,7 @@ import { NotificationsService } from '../../notifications/services/notifications
 import { UpsertInventoryDto } from '../dto/inventory.dto';
 import { Inventory } from '../entities/inventory.entity';
 import { InventoryRepository } from '../repositories/inventory.repository';
+import { BranchesService } from './branches.service';
 
 /** A product in either of these states is not sellable — its stock is locked
  *  at 0 everywhere (see {@link InventoryService.upsert}) until an admin moves
@@ -29,7 +31,10 @@ export class InventoryService {
     @InjectRepository(ProductVariant)
     private readonly variants: Repository<ProductVariant>,
     private readonly notifications: NotificationsService,
+    private readonly branches: BranchesService,
   ) {}
+
+  private readonly logger = new Logger(InventoryService.name);
 
   /** Per-branch availability for a variant — powers the FE `BranchStock[]`. */
   findForVariant(variantId: string): Promise<Inventory[]> {
@@ -68,7 +73,7 @@ export class InventoryService {
   async upsert(dto: UpsertInventoryDto): Promise<Inventory> {
     const variant = await this.variants.findOne({
       where: { id: dto.variantId },
-      relations: { product: true },
+      relations: { product: { images: true } },
     });
     if (!variant) throw new NotFoundException('Variant not found');
     if (LOCKED_PRODUCT_STATUSES.includes(variant.product.status)) {
@@ -88,8 +93,25 @@ export class InventoryService {
         variantId: dto.variantId,
       });
 
-    // Snapshot the previous quantity before mutation to detect a 0 → >0 restock.
-    const prevQuantity: number = record.quantity ?? 0;
+    // Snapshot available (= quantity − reserved) before mutation.
+    // Notification fires when available goes 0 → >0, not when raw quantity
+    // changes — a branch can have quantity > 0 but available = 0 when all
+    // units are reserved by pending orders.
+    const prevAvailable = Math.max(
+      0,
+      (record.quantity ?? 0) - (record.reserved ?? 0),
+    );
+
+    // Tồn kho không được thấp hơn số đang được giữ (reserved) bởi các đơn chưa
+    // hoàn tất — nếu không, `available = quantity − reserved` sẽ âm và kho bị
+    // "bán khống". VD: quantity 5, reserved 5 ⇒ chỉ được chỉnh xuống tối thiểu 5.
+    const reserved = record.reserved ?? 0;
+    if (dto.quantity < reserved) {
+      throw new BadRequestException(
+        `Không thể đặt tồn kho về ${dto.quantity}: hiện có ${reserved} đơn vị đang được giữ bởi đơn hàng chưa hoàn tất. ` +
+          `Số lượng tồn phải ≥ ${reserved}.`,
+      );
+    }
 
     record.quantity = dto.quantity;
     if (dto.status) {
@@ -102,17 +124,46 @@ export class InventoryService {
     }
     const saved = await this.inventory.save(record);
 
-    // Notify subscribers when an admin restocks a previously empty shelf.
-    if (prevQuantity === 0 && saved.quantity > 0) {
-      this.notifications
-        .dispatchBackInStock(dto.variantId, dto.branchId, {
-          productName: variant.product.name,
-          productSlug: variant.product.slug,
-        })
-        .catch(() => undefined);
+    // Notify subscribers when available goes from 0 to >0 (restock).
+    const savedAvailable = Math.max(0, saved.quantity - (saved.reserved ?? 0));
+    if (prevAvailable === 0 && savedAvailable > 0) {
+      void this.dispatchRestockEmail(variant, dto.branchId);
     }
 
     return saved;
+  }
+
+  /** Gom thông tin sản phẩm đầy đủ (ảnh, giá, mô tả, tên chi nhánh) rồi bắn
+   *  email back-in-stock cho người đăng ký. Fire-and-forget: mọi lỗi tra cứu/
+   *  gửi đều được nuốt để không ảnh hưởng tới việc ghi tồn kho. */
+  private async dispatchRestockEmail(
+    variant: ProductVariant,
+    branchId: string,
+  ): Promise<void> {
+    try {
+      const product = variant.product;
+      const imageUrl =
+        variant.imageUrl ??
+        product.images?.find((i) => i.isPrimary)?.url ??
+        product.images?.[0]?.url;
+      const branchName = await this.branches
+        .findOne(branchId)
+        .then((b) => b?.name)
+        .catch(() => undefined);
+
+      await this.notifications.dispatchBackInStock(variant.id, branchId, {
+        productName: product.name,
+        productSlug: product.slug,
+        branchName,
+        imageUrl,
+        price: variant.price,
+        compareAtPrice: variant.compareAtPrice,
+        currency: product.currency,
+        shortDescription: product.shortDescription,
+      });
+    } catch (err) {
+      this.logger.error(`dispatchRestockEmail thất bại: ${String(err)}`);
+    }
   }
 
   /**

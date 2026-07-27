@@ -1,6 +1,7 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
+import { CheckPendingDto } from '../dto/check-pending.dto';
 import { SubscribeBackInStockDto } from '../dto/subscribe.dto';
 import { NotificationsService } from '../services/notifications.service';
 
@@ -14,5 +15,19 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Notify me when a variant is back in stock' })
   subscribe(@Body() dto: SubscribeBackInStockDto) {
     return this.notifications.subscribeBackInStock(dto);
+  }
+
+  @Public()
+  @Get('back-in-stock/pending')
+  @ApiOperation({
+    summary: 'Check if a contact still has an active pending subscription',
+  })
+  async checkPending(@Query() q: CheckPendingDto): Promise<{ pending: boolean }> {
+    const pending = await this.notifications.checkPending(
+      q.variantId,
+      q.contact,
+      q.branchId,
+    );
+    return { pending };
   }
 }

@@ -656,9 +656,12 @@ export class OrdersService {
     // Snapshot before the transaction mutates stockStatus.
     const wasCommitted = order.stockStatus === OrderStockStatus.COMMITTED;
     const branchId = order.branchId;
+    const currency = order.currency;
     const restockedItems = order.items.map((i) => ({
       variantId: i.variantId,
       productName: i.productName,
+      imageUrl: i.imageUrl,
+      price: i.unitPrice,
     }));
 
     const saved = await this.dataSource.transaction(async (manager) => {
@@ -689,10 +692,18 @@ export class OrdersService {
 
     // Notify subscribers only after the transaction has committed (physical restock).
     if (wasCommitted) {
+      const branchName = await this.branches
+        .findOne(branchId)
+        .then((b) => b?.name)
+        .catch(() => undefined);
       for (const item of restockedItems) {
         this.notifications
           .dispatchBackInStock(item.variantId, branchId, {
             productName: item.productName,
+            branchName,
+            imageUrl: item.imageUrl,
+            price: item.price,
+            currency,
           })
           .catch(() => undefined);
       }

@@ -84,6 +84,28 @@ export class NotificationsService {
   }
 
   /**
+   * Returns true when a pending (not yet notified) subscription exists for the
+   * given (variantId, contact, branchId) triple.
+   *
+   * Called by the storefront on PDP mount to determine whether the previously
+   * subscribed state is still active or has already been fulfilled (notifiedAt
+   * is set). If fulfilled, the FE resets the button so the user can subscribe
+   * again for the next stock cycle.
+   */
+  async checkPending(
+    variantId: string,
+    contact: string,
+    branchId?: string,
+  ): Promise<boolean> {
+    const sub = await this.notifications.findExisting(
+      variantId,
+      contact,
+      branchId,
+    );
+    return !!sub;
+  }
+
+  /**
    * Links all pending guest subscriptions for `email` to a newly registered
    * account. Runs as fire-and-forget from CustomersService.create() — a failure
    * here must never break registration, so callers should `.catch(() => undefined)`.
