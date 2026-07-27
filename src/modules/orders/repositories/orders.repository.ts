@@ -195,6 +195,33 @@ export class OrdersRepository {
     };
   }
 
+  /** Snapshot for the orders-list reminder banner: how many orders are still
+   *  awaiting admin approval (status = PENDING), and how many of those have been
+   *  waiting since before `overdueBefore`. Branch-scoped like the dashboard
+   *  summary; a fresh query builder per count so they run in parallel safely. */
+  async pendingReview(filters: {
+    branchId?: string;
+    allowedBranchIds?: string[];
+    overdueBefore: Date;
+  }): Promise<{ pending: number; overdue: number }> {
+    const pendingQb = () =>
+      this.summaryQuery({
+        branchId: filters.branchId,
+        allowedBranchIds: filters.allowedBranchIds,
+      }).andWhere('o.status = :pending', { pending: OrderStatus.PENDING });
+
+    const [pending, overdue] = await Promise.all([
+      pendingQb().getCount(),
+      pendingQb()
+        .andWhere('COALESCE(o.placedAt, o.createdAt) < :overdueBefore', {
+          overdueBefore: filters.overdueBefore,
+        })
+        .getCount(),
+    ]);
+
+    return { pending, overdue };
+  }
+
   findById(id: string): Promise<Order | null> {
     return this.repo.findOne({ where: { id }, relations: ['branch'] });
   }

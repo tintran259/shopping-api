@@ -24,6 +24,7 @@ import { AdminCreateOrderDto } from '../dto/checkout.dto';
 import { CreateGhnShipmentDto } from '../dto/create-ghn-shipment.dto';
 import { CreateGhtkShipmentDto } from '../dto/create-ghtk-shipment.dto';
 import { MockWebhookDto } from '../dto/mock-webhook.dto';
+import { PendingReviewQueryDto } from '../dto/pending-review-query.dto';
 import { UpdateOrderStatusDto } from '../dto/update-order-status.dto';
 import { UpsertShipmentDto } from '../dto/upsert-shipment.dto';
 import { GhnService } from '../services/ghn.service';
@@ -84,6 +85,21 @@ export class AdminOrdersController {
     @BranchScope() scope: BranchScopeCtx,
   ) {
     return this.orders.summary(query, scope);
+  }
+
+  @Get('pending-review')
+  @RequirePermission('orders.view')
+  @ApiOperation({
+    summary:
+      'Count orders awaiting admin approval (status = pending) and how many of ' +
+      'those are overdue (waiting past the reminder threshold) — branch-scoped ' +
+      'snapshot for the orders-list reminder banner.',
+  })
+  pendingReview(
+    @Query() query: PendingReviewQueryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.orders.pendingReview(query, scope);
   }
 
   @Get(':id')

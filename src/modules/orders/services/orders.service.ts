@@ -34,6 +34,7 @@ import { ReviewsService } from '../../reviews/services/reviews.service';
 import { VouchersService } from '../../vouchers/services/vouchers.service';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
+import { PendingReviewQueryDto } from '../dto/pending-review-query.dto';
 import {
   AdminCreateOrderDto,
   CheckoutDto,
@@ -369,6 +370,29 @@ export class OrdersService {
       totalRevenue: raw.totalRevenue,
       byStatus,
       series: raw.seriesRows.map((r) => ({ date: r.day, revenue: r.revenue })),
+    };
+  }
+
+  /** Đơn chờ duyệt (PENDING) quá số ngày này bị coi là tồn đọng — cảnh báo trên
+   *  danh sách đơn. */
+  private static readonly PENDING_REVIEW_OVERDUE_DAYS = 2;
+
+  /** Đếm số đơn đang chờ admin duyệt (status = PENDING) + số đơn đã chờ quá
+   *  ngưỡng ngày, cho banner nhắc việc ở trang danh sách đơn hàng. */
+  async pendingReview(query: PendingReviewQueryDto, scope?: BranchScopeCtx) {
+    const overdueBefore = new Date(
+      Date.now() -
+        OrdersService.PENDING_REVIEW_OVERDUE_DAYS * 24 * 60 * 60 * 1000,
+    );
+    const { pending, overdue } = await this.orders.pendingReview({
+      branchId: query.branchId,
+      allowedBranchIds: allowedBranchIds(scope),
+      overdueBefore,
+    });
+    return {
+      pending,
+      overdue,
+      thresholdDays: OrdersService.PENDING_REVIEW_OVERDUE_DAYS,
     };
   }
 
