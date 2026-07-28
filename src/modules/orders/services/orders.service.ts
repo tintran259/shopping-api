@@ -34,6 +34,7 @@ import { ReviewsService } from '../../reviews/services/reviews.service';
 import { VouchersService } from '../../vouchers/services/vouchers.service';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
+import { BestSellersQueryDto } from '../dto/best-sellers-query.dto';
 import { PendingReviewQueryDto } from '../dto/pending-review-query.dto';
 import {
   AdminCreateOrderDto,
@@ -396,6 +397,22 @@ export class OrdersService {
     };
   }
 
+  /** Sản phẩm bán chạy nhất (theo số lượng bán) trong khoảng ngày + chi nhánh. */
+  async bestSellers(query: BestSellersQueryDto, scope?: BranchScopeCtx) {
+    const rows = await this.orders.bestSellers({
+      branchId: query.branchId,
+      allowedBranchIds: allowedBranchIds(scope),
+      dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
+      dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
+      limit: query.limit ?? 10,
+    });
+    return rows.map((r) => ({
+      productName: r.productName,
+      unitsSold: Number(r.unitsSold),
+      revenue: r.revenue ?? '0',
+    }));
+  }
+
   async findOneForUser(customerId: string, id: string): Promise<Order> {
     const order = await this.findOne(id);
     if (order.customerId !== customerId) throw new ForbiddenException();
@@ -475,19 +492,24 @@ export class OrdersService {
     });
 
     // Notify BO for each low-rated item (≤2★) — fire-and-forget.
-    const nameByVariant = new Map(allItems.map((l) => [l.variantId, l.productName]));
+    const nameByVariant = new Map(
+      allItems.map((l) => [l.variantId, l.productName]),
+    );
     for (const review of reviews) {
       if (review.rating <= LOW_RATING_THRESHOLD) {
         void this.adminNotifications
           .notifyLowRating({
             reviewId: review.id,
             productId: review.productId,
-            productName: nameByVariant.get(review.variantId ?? '') ?? 'Sản phẩm',
+            productName:
+              nameByVariant.get(review.variantId ?? '') ?? 'Sản phẩm',
             rating: review.rating,
             branchId: order.branchId,
           })
           .catch((err) =>
-            this.logger.error(`Thông báo đánh giá thấp thất bại: ${String(err)}`),
+            this.logger.error(
+              `Thông báo đánh giá thấp thất bại: ${String(err)}`,
+            ),
           );
       }
     }

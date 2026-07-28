@@ -37,6 +37,58 @@ export class InventoryRepository {
     return this.repo.findOne({ where: { branchId, variantId } });
   }
 
+  /** Tồn kho thấp: các dòng (chi nhánh × biến thể) có `available = quantity −
+   *  reserved` ≤ ngưỡng, kèm tên sản phẩm/chi nhánh/SKU. Lọc theo chi nhánh được
+   *  phép (branch scope). `threshold = 0` ⇒ đúng các mặt hàng đã hết hàng. */
+  lowStock(filters: {
+    threshold: number;
+    branchId?: string;
+    allowedBranchIds?: string[];
+    limit: number;
+  }): Promise<
+    {
+      branchId: string;
+      branchName: string;
+      variantId: string;
+      sku: string;
+      productName: string;
+      quantity: number;
+      reserved: number;
+      available: number;
+    }[]
+  > {
+    const qb = this.repo
+      .createQueryBuilder('inv')
+      .innerJoin('inv.branch', 'b')
+      .innerJoin('inv.variant', 'v')
+      .innerJoin('v.product', 'p')
+      .select('inv.branchId', 'branchId')
+      .addSelect('b.name', 'branchName')
+      .addSelect('inv.variantId', 'variantId')
+      .addSelect('v.sku', 'sku')
+      .addSelect('p.name', 'productName')
+      .addSelect('inv.quantity', 'quantity')
+      .addSelect('inv.reserved', 'reserved')
+      .addSelect('inv.quantity - inv.reserved', 'available')
+      .where('inv.quantity - inv.reserved <= :threshold', {
+        threshold: filters.threshold,
+      })
+      .orderBy('inv.quantity - inv.reserved', 'ASC')
+      .limit(filters.limit);
+
+    if (filters.branchId) {
+      qb.andWhere('inv.branchId = :branchId', { branchId: filters.branchId });
+    }
+    if (filters.allowedBranchIds) {
+      if (filters.allowedBranchIds.length === 0) qb.andWhere('1 = 0');
+      else
+        qb.andWhere('inv.branchId IN (:...allowedBranchIds)', {
+          allowedBranchIds: filters.allowedBranchIds,
+        });
+    }
+    return qb.getRawMany();
+  }
+
   /** Bulk zero-out physical stock — only existing rows (unassigned branches
    *  have none to reset; they're already implicitly 0). Deliberately leaves
    *  `reserved` untouched: it tracks real unfulfilled orders placed before

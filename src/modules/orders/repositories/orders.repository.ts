@@ -222,6 +222,34 @@ export class OrdersRepository {
     return { pending, overdue };
   }
 
+  /** Sản phẩm bán chạy: tổng số lượng + doanh thu theo tên sản phẩm (snapshot ở
+   *  `order_items`), chỉ tính đơn đã thanh toán, lọc theo chi nhánh + khoảng ngày
+   *  như dashboard summary. Nhóm theo tên snapshot để không phụ thuộc biến thể có
+   *  thể đã bị xóa. */
+  bestSellers(filters: {
+    branchId?: string;
+    allowedBranchIds?: string[];
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit: number;
+  }): Promise<{ productName: string; unitsSold: string; revenue: string }[]> {
+    return this.summaryQuery({
+      branchId: filters.branchId,
+      allowedBranchIds: filters.allowedBranchIds,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    })
+      .innerJoin('o.items', 'oi')
+      .andWhere('o.paymentStatus = :paid', { paid: PaymentStatus.PAID })
+      .select('oi.productName', 'productName')
+      .addSelect('SUM(oi.quantity)', 'unitsSold')
+      .addSelect('SUM(oi.lineTotal)', 'revenue')
+      .groupBy('oi.productName')
+      .orderBy('"unitsSold"', 'DESC')
+      .limit(filters.limit)
+      .getRawMany();
+  }
+
   findById(id: string): Promise<Order | null> {
     return this.repo.findOne({ where: { id }, relations: ['branch'] });
   }

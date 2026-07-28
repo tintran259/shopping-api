@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -21,6 +22,7 @@ import { Public } from '../../../common/decorators/public.decorator';
 import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { CreateBranchDto, UpdateBranchDto } from '../dto/branch.dto';
 import { UpsertInventoryDto } from '../dto/inventory.dto';
+import { LowStockQueryDto } from '../dto/low-stock-query.dto';
 import { BranchesService } from '../services/branches.service';
 import { InventoryService } from '../services/inventory.service';
 
@@ -44,6 +46,21 @@ export class BranchesController {
   @ApiOperation({ summary: 'Per-branch stock for a variant (BranchStock[])' })
   variantStock(@Param('variantId', ParseUUIDPipe) variantId: string) {
     return this.inventory.findForVariant(variantId);
+  }
+
+  @Get('inventory/low-stock')
+  @ApiBearerAuth()
+  @RequirePermission('inventory.view')
+  @ApiOperation({
+    summary:
+      '[admin] Mặt hàng tồn kho thấp/hết hàng (available ≤ threshold), ' +
+      'branch-scoped. threshold=0 ⇒ đã hết hàng. Dùng cho báo cáo & trợ lý AI.',
+  })
+  lowStock(
+    @Query() query: LowStockQueryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.inventory.lowStock(query, scope);
   }
 
   @Put('inventory')

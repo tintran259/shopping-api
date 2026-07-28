@@ -73,4 +73,16 @@ export default () => ({
   storefront: {
     url: process.env.STOREFRONT_URL ?? 'http://localhost:3001',
   },
+  /** AI assistant (Back-office chatbot). Runs server-side so the API key never
+   *  reaches the browser. Empty `apiKey` ⇒ the chat endpoint returns a clear
+   *  "chưa cấu hình" error (same env-is-the-flag pattern as GHN/GHTK mock mode).
+   *  `model` is swappable via env so switching Claude tiers needs no code change. */
+  ai: {
+    apiKey: process.env.ANTHROPIC_API_KEY ?? '',
+    model: process.env.AI_MODEL ?? 'claude-sonnet-4-5',
+    maxTokens: parseInt(process.env.AI_MAX_TOKENS ?? '1024', 10),
+    /** Trần số vòng gọi tool trong một lượt trả lời (chặn lặp vô hạn). */
+    maxToolIterations: parseInt(process.env.AI_MAX_TOOL_ITERS ?? '6', 10),
+    enabled: process.env.AI_ENABLED !== 'false',
+  },
 });

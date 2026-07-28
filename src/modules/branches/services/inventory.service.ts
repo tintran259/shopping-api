@@ -9,6 +9,8 @@ import { EntityManager, Repository } from 'typeorm';
 import { InventoryStatus, ProductStatus } from '../../../common/enums';
 import { ProductVariant } from '../../catalog/entities/product-variant.entity';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { BranchScopeCtx } from '../../../common/decorators/branch-scope.decorator';
+import { LowStockQueryDto } from '../dto/low-stock-query.dto';
 import { UpsertInventoryDto } from '../dto/inventory.dto';
 import { Inventory } from '../entities/inventory.entity';
 import { InventoryRepository } from '../repositories/inventory.repository';
@@ -48,6 +50,17 @@ export class InventoryService {
 
   getRecord(branchId: string, variantId: string): Promise<Inventory | null> {
     return this.inventory.getRecord(branchId, variantId);
+  }
+
+  /** Tồn kho thấp (available ≤ threshold), lọc theo phạm vi chi nhánh. */
+  lowStock(query: LowStockQueryDto, scope?: BranchScopeCtx) {
+    return this.inventory.lowStock({
+      threshold: query.threshold ?? 0,
+      branchId: query.branchId,
+      allowedBranchIds:
+        scope && !scope.allBranches ? scope.branchIds : undefined,
+      limit: query.limit ?? 20,
+    });
   }
 
   /**

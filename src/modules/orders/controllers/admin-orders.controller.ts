@@ -20,6 +20,7 @@ import { RequirePermission } from '../../../common/decorators/require-permission
 import { OrderScopeGuard } from '../guards/order-scope.guard';
 import { AdminOrderQueryDto } from '../dto/admin-order-query.dto';
 import { AdminOrderSummaryQueryDto } from '../dto/admin-order-summary-query.dto';
+import { BestSellersQueryDto } from '../dto/best-sellers-query.dto';
 import { AdminCreateOrderDto } from '../dto/checkout.dto';
 import { CreateGhnShipmentDto } from '../dto/create-ghn-shipment.dto';
 import { CreateGhtkShipmentDto } from '../dto/create-ghtk-shipment.dto';
@@ -85,6 +86,20 @@ export class AdminOrdersController {
     @BranchScope() scope: BranchScopeCtx,
   ) {
     return this.orders.summary(query, scope);
+  }
+
+  @Get('best-sellers')
+  @RequirePermission('orders.view')
+  @ApiOperation({
+    summary:
+      'Sản phẩm bán chạy nhất theo số lượng (đơn đã thanh toán) — lọc theo chi ' +
+      'nhánh + khoảng ngày, branch-scoped. Dùng cho báo cáo & trợ lý AI.',
+  })
+  bestSellers(
+    @Query() query: BestSellersQueryDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.orders.bestSellers(query, scope);
   }
 
   @Get('pending-review')
