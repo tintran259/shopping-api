@@ -10,7 +10,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { diskStorage } from 'multer';
 
@@ -26,7 +31,9 @@ export class ReviewUploadsController {
   constructor(private readonly config: ConfigService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Upload up to 5 review images (multipart field: files)' })
+  @ApiOperation({
+    summary: 'Upload up to 5 review images (multipart field: files)',
+  })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FilesInterceptor('files', MAX_FILES, {

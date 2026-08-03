@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { extname } from 'path';
 import {
   BadRequestException,
+  Body,
   Controller,
   Post,
   Req,
@@ -19,6 +20,8 @@ import {
 import type { Request } from 'express';
 import { diskStorage } from 'multer';
 import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
+import { GenerateImageDto } from '../dto/generate-image.dto';
+import { ImageGenService } from '../services/image-gen.service';
 
 const MAX_FILES = 10;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB / file
@@ -34,7 +37,32 @@ const ALLOWED = /^image\/(jpeg|png|webp|gif|avif)$/;
 @ApiBearerAuth()
 @Controller('admin/uploads')
 export class AdminUploadsController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly imageGen: ImageGenService,
+  ) {}
+
+  private base(req: Request): string {
+    return (
+      this.config.get<string>('publicUrl') ||
+      `${req.protocol}://${req.get('host')}`
+    );
+  }
+
+  @Post('generate')
+  @RequirePermission('catalog.create', 'catalog.update')
+  @ApiOperation({
+    summary:
+      'Tạo ảnh sản phẩm bằng AI từ mô tả (prompt) — ảnh được lưu vào /uploads ' +
+      'như ảnh tải lên, trả về URL. Chưa cấu hình OPENAI_API_KEY ⇒ ảnh mock.',
+  })
+  async generate(
+    @Body() dto: GenerateImageDto,
+    @Req() req: Request,
+  ): Promise<{ url: string }> {
+    const filename = await this.imageGen.generate(dto.prompt);
+    return { url: `${this.base(req)}/uploads/${filename}` };
+  }
 
   @Post()
   @RequirePermission('catalog.create', 'catalog.update')

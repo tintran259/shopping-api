@@ -73,6 +73,16 @@ export default () => ({
   storefront: {
     url: process.env.STOREFRONT_URL ?? 'http://localhost:3001',
   },
+  /** AI image generation for product photos (Back-office). Separate provider
+   *  from the chatbot — Anthropic/Claude has no image generation, so this uses
+   *  OpenAI's image API. Empty `apiKey` ⇒ mock mode (returns a labeled SVG
+   *  placeholder) so the flow is testable locally without billing — same
+   *  env-is-the-flag pattern as GHN/GHTK. Swappable via env, no code change. */
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY ?? '',
+    imageModel: process.env.OPENAI_IMAGE_MODEL ?? 'gpt-image-1',
+    imageSize: process.env.OPENAI_IMAGE_SIZE ?? '1024x1024',
+  },
   /** AI assistant (Back-office chatbot). Runs server-side so the API key never
    *  reaches the browser. Empty `apiKey` ⇒ the chat endpoint returns a clear
    *  "chưa cấu hình" error (same env-is-the-flag pattern as GHN/GHTK mock mode).
