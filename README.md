@@ -37,6 +37,13 @@ npm run migration:run
 npm run migration:revert
 ```
 
+## Docs
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [`docs/ai-product-images.md`](docs/ai-product-images.md) | Sinh ảnh sản phẩm bằng AI (OpenAI) & gắn vào sản phẩm |
+| [`docs/ecommerce-schema.dbml`](docs/ecommerce-schema.dbml) | Sơ đồ schema database (DBML) |
+
 ## Auth model
 
 A global `JwtAuthGuard` protects every route; mark public routes with `@Public()`. Admin-only routes add
