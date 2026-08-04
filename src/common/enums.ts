@@ -159,6 +159,14 @@ export enum ReviewStatus {
   REJECTED = 'rejected',
 }
 
+/** Vòng đời của một combo sản phẩm (gói bán kèm giá cố định). Chỉ `active` mới
+ *  hiển thị/bán trên storefront; `draft` đang soạn; `inactive` đã tắt. */
+export enum ComboStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
 /** Data shape a category-level attribute *definition* expects — this is the
  *  filter template (e.g. "Size" is a SELECT with options S/M/L), distinct
  *  from `ProductAttribute` (a free-form key/value/label already filled in

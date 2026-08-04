@@ -50,4 +50,14 @@ export class OrderItem extends BaseEntity {
   @ApiProperty()
   @Column({ name: 'line_total', type: 'numeric', precision: 12, scale: 2 })
   lineTotal: string;
+
+  /** Nếu dòng này thuộc một combo: id combo (gom nhóm) + tên combo (snapshot).
+   *  Null cho dòng mua lẻ thông thường. */
+  @ApiProperty({ required: false, format: 'uuid' })
+  @Column({ name: 'combo_id', type: 'uuid', nullable: true })
+  comboId?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ name: 'combo_name', nullable: true })
+  comboName?: string;
 }

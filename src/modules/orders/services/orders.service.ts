@@ -42,12 +42,13 @@ import {
   CheckoutItemDto,
   GuestCheckoutDto,
 } from '../dto/checkout.dto';
+import { CombosService } from '../../combos/services/combos.service';
 import { Order, ShippingAddressSnapshot } from '../entities/order.entity';
 import { OrdersRepository } from '../repositories/orders.repository';
 import { ShipmentsRepository } from '../repositories/shipments.repository';
 
 /** A resolved order line ready to persist (price/name pulled server-side). */
-interface OrderLineItem {
+export interface OrderLineItem {
   variantId: string;
   productId: string;
   productSlug: string;
@@ -57,6 +58,9 @@ interface OrderLineItem {
   unitPrice: string;
   quantity: number;
   imageUrl?: string;
+  /** Gắn khi dòng thuộc một combo (đã "nở" từ combo) — snapshot để hiển thị. */
+  comboId?: string;
+  comboName?: string;
 }
 
 /** Human variant label snapshot, e.g. "500g" or "Đen · M". Empty for
@@ -108,6 +112,7 @@ export class OrdersService {
     private readonly adminNotifications: AdminNotificationsService,
     private readonly reviews: ReviewsService,
     private readonly notifications: NotificationsService,
+    private readonly combos: CombosService,
   ) {}
 
   private readonly logger = new Logger(OrdersService.name);
@@ -180,6 +185,18 @@ export class OrdersService {
   ): Promise<OrderLineItem[]> {
     const lineItems: OrderLineItem[] = [];
     for (const it of items) {
+      // Dòng combo: "nở" thành các dòng thành phần (giá combo phân bổ về từng dòng).
+      if (it.comboId) {
+        const comboLines = await this.combos.resolveComboLineItems(
+          it.comboId,
+          it.quantity,
+        );
+        lineItems.push(...comboLines);
+        continue;
+      }
+      if (!it.variantId) {
+        throw new BadRequestException('Mỗi dòng cần variantId hoặc comboId');
+      }
       const variant = await this.products.getVariantOrFail(it.variantId);
       if (!variant.isActive) {
         throw new BadRequestException('Một sản phẩm không còn khả dụng');

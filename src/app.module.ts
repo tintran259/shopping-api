@@ -22,6 +22,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { SearchModule } from './modules/search/search.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
+import { CombosModule } from './modules/combos/combos.module';
 import { VouchersModule } from './modules/vouchers/vouchers.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 
@@ -61,6 +62,7 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     AdminNotificationsModule,
     UploadsModule,
     AssistantModule,
+    CombosModule,
   ],
   providers: [
     // JWT auth is on by default; opt out per-route with @Public().

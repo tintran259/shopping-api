@@ -108,7 +108,22 @@ export class CheckoutDto {
 }
 
 export class CheckoutItemDto {
-  @ApiProperty({ format: 'uuid' }) @IsUUID() variantId: string;
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Biến thể sản phẩm (dùng một trong variantId/comboId)',
+  })
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Combo — sẽ "nở" thành các dòng thành phần (xor variantId)',
+  })
+  @IsOptional()
+  @IsUUID()
+  comboId?: string;
+
   @ApiProperty({ minimum: 1 })
   @Type(() => Number)
   @IsInt()
