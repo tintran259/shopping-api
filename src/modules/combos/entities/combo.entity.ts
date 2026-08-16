@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Column, Entity, Index, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { ComboStatus } from '../../../common/enums';
+import { Branch } from '../../branches/entities/branch.entity';
 import { ComboItem } from './combo-item.entity';
 
 /**
@@ -39,12 +47,26 @@ export class Combo extends BaseEntity {
 
   @ApiProperty({ required: false })
   @Column({ name: 'starts_at', type: 'timestamptz', nullable: true })
-  startsAt?: Date;
+  startsAt?: Date | null;
 
   @ApiProperty({ required: false })
   @Column({ name: 'ends_at', type: 'timestamptz', nullable: true })
-  endsAt?: Date;
+  endsAt?: Date | null;
 
+  /** Chi nhánh bán/tính tồn của combo. `null` = mọi chi nhánh (tổng tồn toàn hệ
+   *  thống). Khi có, tồn khả dụng chỉ tính trên chi nhánh này — khớp với việc
+   *  mỗi đơn giữ kho theo đúng 1 chi nhánh. */
+  @ApiProperty({ required: false, format: 'uuid' })
+  @Column({ name: 'branch_id', type: 'uuid', nullable: true })
+  branchId?: string | null;
+
+  @ManyToOne(() => Branch, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'branch_id' })
+  branch?: Branch | null;
+
+  /** Chỉ cascade khi TẠO combo. Lúc update, thành phần được thay tường minh
+   *  (xóa dòng cũ + chèn dòng mới) trong `CombosService.update` — không dựa vào
+   *  orphan-removal của TypeORM (nó nullify combo_id → vi phạm NOT NULL). */
   @OneToMany(() => ComboItem, (i) => i.combo, { cascade: true })
   items: ComboItem[];
 }

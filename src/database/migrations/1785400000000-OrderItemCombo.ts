@@ -23,7 +23,9 @@ export class OrderItemCombo1785400000000 implements MigrationInterface {
 
   public async down(q: QueryRunner): Promise<void> {
     await q.query(`DROP INDEX IF EXISTS "IDX_order_items_combo_id"`);
-    await q.query(`ALTER TABLE "order_items" DROP COLUMN IF EXISTS "combo_name"`);
+    await q.query(
+      `ALTER TABLE "order_items" DROP COLUMN IF EXISTS "combo_name"`,
+    );
     await q.query(`ALTER TABLE "order_items" DROP COLUMN IF EXISTS "combo_id"`);
   }
 }

@@ -135,17 +135,27 @@ export class OrdersService {
     const cart = await this.cart.getActiveCart(customerId);
     if (!cart.items.length) throw new BadRequestException('Cart is empty');
 
-    const lineItems: OrderLineItem[] = cart.items.map((i) => ({
-      variantId: i.variantId,
-      productId: i.variant?.productId ?? '',
-      productSlug: i.variant?.product?.slug ?? '',
-      productName: i.variant?.product?.name ?? i.variant?.sku ?? 'Item',
-      variantTitle: variantLabel(i.variant),
-      sku: i.variant?.sku ?? '',
-      unitPrice: i.unitPrice,
-      quantity: i.quantity,
-      imageUrl: lineImageUrl(i.variant),
-    }));
+    const lineItems: OrderLineItem[] = [];
+    for (const i of cart.items) {
+      // Dòng combo trong giỏ → "nở" thành các dòng thành phần (phân bổ giá combo).
+      if (i.comboId) {
+        lineItems.push(
+          ...(await this.combos.resolveComboLineItems(i.comboId, i.quantity)),
+        );
+        continue;
+      }
+      lineItems.push({
+        variantId: i.variantId!,
+        productId: i.variant?.productId ?? '',
+        productSlug: i.variant?.product?.slug ?? '',
+        productName: i.variant?.product?.name ?? i.variant?.sku ?? 'Item',
+        variantTitle: variantLabel(i.variant),
+        sku: i.variant?.sku ?? '',
+        unitPrice: i.unitPrice,
+        quantity: i.quantity,
+        imageUrl: lineImageUrl(i.variant),
+      });
+    }
 
     return this.placeOrder({
       customerId,

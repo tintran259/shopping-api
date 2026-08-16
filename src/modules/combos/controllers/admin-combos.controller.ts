@@ -11,6 +11,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  BranchScope,
+  type BranchScopeCtx,
+} from '../../../common/decorators/branch-scope.decorator';
 import { RequirePermission } from '../../../common/decorators/require-permission.decorator';
 import { AdminComboQueryDto } from '../dto/admin-combo-query.dto';
 import { CreateComboDto } from '../dto/create-combo.dto';
@@ -43,15 +47,19 @@ export class AdminCombosController {
   @Post()
   @RequirePermission('catalog.create')
   @ApiOperation({ summary: 'Tạo combo' })
-  create(@Body() dto: CreateComboDto) {
-    return this.combos.create(dto);
+  create(@Body() dto: CreateComboDto, @BranchScope() scope: BranchScopeCtx) {
+    return this.combos.create(dto, scope);
   }
 
   @Patch(':id')
   @RequirePermission('catalog.update')
   @ApiOperation({ summary: 'Sửa combo (gửi items = thay toàn bộ thành phần)' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateComboDto) {
-    return this.combos.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateComboDto,
+    @BranchScope() scope: BranchScopeCtx,
+  ) {
+    return this.combos.update(id, dto, scope);
   }
 
   @Delete(':id')

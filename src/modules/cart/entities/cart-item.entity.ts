@@ -13,12 +13,22 @@ export class CartItem extends BaseEntity {
   @Column({ name: 'cart_id' })
   cartId: string;
 
-  @ManyToOne(() => ProductVariant, { eager: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => ProductVariant, {
+    eager: true,
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
   @JoinColumn({ name: 'variant_id' })
-  variant: ProductVariant;
+  variant?: ProductVariant;
 
-  @Column({ name: 'variant_id' })
-  variantId: string;
+  /** Biến thể (dòng mua lẻ) — null nếu đây là dòng combo. */
+  @Column({ name: 'variant_id', nullable: true })
+  variantId?: string;
+
+  /** Combo (dòng combo) — null nếu đây là dòng biến thể lẻ. */
+  @ApiProperty({ required: false, format: 'uuid' })
+  @Column({ name: 'combo_id', type: 'uuid', nullable: true })
+  comboId?: string;
 
   @ApiProperty()
   @Column({ type: 'int' })

@@ -69,6 +69,15 @@ export class CreateComboDto {
   @IsISO8601()
   endsAt?: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Chi nhánh bán/tính tồn (bỏ trống = mọi chi nhánh)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  branchId?: string | null;
+
   @ApiProperty({ type: [ComboItemInputDto], description: 'Thành phần (≥1)' })
   @IsArray()
   @ArrayMinSize(1)

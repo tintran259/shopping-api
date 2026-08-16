@@ -12,7 +12,10 @@ import { CartItem } from '../entities/cart-item.entity';
  */
 export interface CartLineDto {
   id: string;
-  variantId: string;
+  /** Dòng biến thể lẻ. Vắng nếu là dòng combo. */
+  variantId?: string;
+  /** Dòng combo. Vắng nếu là dòng biến thể lẻ. */
+  comboId?: string;
   slug: string;
   name: string;
   image: { url?: string; alt?: string };

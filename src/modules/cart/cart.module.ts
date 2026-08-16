@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BranchesModule } from '../branches/branches.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { CombosModule } from '../combos/combos.module';
 import { CartController } from './controllers/cart.controller';
 import { CartItem } from './entities/cart-item.entity';
 import { Cart } from './entities/cart.entity';
@@ -13,6 +14,7 @@ import { CartService } from './services/cart.service';
     TypeOrmModule.forFeature([Cart, CartItem]),
     CatalogModule,
     BranchesModule,
+    CombosModule,
   ],
   controllers: [CartController],
   providers: [CartService, CartRepository],

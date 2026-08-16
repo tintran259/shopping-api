@@ -5,6 +5,7 @@ import { BranchesModule } from '../branches/branches.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CartModule } from '../cart/cart.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { CombosModule } from '../combos/combos.module';
 import { CustomersModule } from '../customers/customers.module';
 import { LocationsModule } from '../locations/locations.module';
 import { PaymentsModule } from '../payments/payments.module';
@@ -43,6 +44,7 @@ import { ShipmentsService } from './services/shipments.service';
     AdminNotificationsModule,
     ReviewsModule,
     NotificationsModule,
+    CombosModule,
   ],
   controllers: [
     OrdersController,

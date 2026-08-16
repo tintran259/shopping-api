@@ -6,10 +6,15 @@ import {
 import { InventoryStatus } from '../../../common/enums';
 import { InventoryService } from '../../branches/services/inventory.service';
 import { ProductsService } from '../../catalog/services/products.service';
+import { CombosService } from '../../combos/services/combos.service';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto/cart.dto';
 import { Cart } from '../entities/cart.entity';
+import { CartItem } from '../entities/cart-item.entity';
 import { CartRepository } from '../repositories/cart.repository';
 import { CartLineDto, toCartLine } from '../serializers/cart.serializer';
+
+/** Kết quả `CombosService.getView` (view combo cho giỏ). */
+type ComboView = Awaited<ReturnType<CombosService['getView']>>;
 
 @Injectable()
 export class CartService {
@@ -17,6 +22,7 @@ export class CartService {
     private readonly carts: CartRepository,
     private readonly products: ProductsService,
     private readonly inventory: InventoryService,
+    private readonly combos: CombosService,
   ) {}
 
   async getActiveCart(customerId: string): Promise<Cart> {
@@ -36,13 +42,21 @@ export class CartService {
 
   async addItem(customerId: string, dto: AddCartItemDto) {
     const cart = await this.getActiveCart(customerId);
-    const variant = await this.products.getVariantOrFail(dto.variantId);
-    if (!variant.isActive) throw new BadRequestException('Variant unavailable');
 
     if (dto.branchId && dto.branchId !== cart.branchId) {
       await this.carts.setBranch(cart.id, dto.branchId);
       cart.branchId = dto.branchId;
     }
+
+    // Dòng combo: giá = giá combo, tồn = tồn khả dụng của combo (không theo variant).
+    if (dto.comboId) {
+      return this.addComboItem(customerId, cart, dto.comboId, dto.quantity);
+    }
+    if (!dto.variantId) {
+      throw new BadRequestException('Cần variantId hoặc comboId');
+    }
+    const variant = await this.products.getVariantOrFail(dto.variantId);
+    if (!variant.isActive) throw new BadRequestException('Variant unavailable');
 
     const existing = cart.items.find((i) => i.variantId === variant.id);
     const desiredQty = (existing?.quantity ?? 0) + dto.quantity;
@@ -64,6 +78,40 @@ export class CartService {
     return this.view(customerId);
   }
 
+  /** Thêm/cộng dồn một dòng combo (giá cố định, tồn = tồn khả dụng của combo). */
+  private async addComboItem(
+    customerId: string,
+    cart: Cart,
+    comboId: string,
+    quantity: number,
+  ) {
+    const view = await this.combos.getView(comboId);
+    if (!view.sellable) {
+      throw new BadRequestException(
+        'Combo hiện không bán (ngoài lịch hoặc đã tắt).',
+      );
+    }
+    const existing = cart.items.find((i) => i.comboId === comboId);
+    const desiredQty = (existing?.quantity ?? 0) + quantity;
+    if (view.availability < desiredQty) {
+      throw new BadRequestException(`Combo chỉ còn ${view.availability} bộ.`);
+    }
+    if (existing) {
+      existing.quantity = desiredQty;
+      await this.carts.saveItem(existing);
+    } else {
+      await this.carts.saveItem(
+        this.carts.createItem({
+          cartId: cart.id,
+          comboId,
+          quantity,
+          unitPrice: view.price,
+        }),
+      );
+    }
+    return this.view(customerId);
+  }
+
   async updateItem(customerId: string, itemId: string, dto: UpdateCartItemDto) {
     const cart = await this.getActiveCart(customerId);
     const item = cart.items.find((i) => i.id === itemId);
@@ -73,7 +121,14 @@ export class CartService {
       await this.carts.removeItem(item);
       return this.view(customerId);
     }
-    await this.assertStock(cart.branchId, item.variantId, dto.quantity);
+    if (item.comboId) {
+      const view = await this.combos.getView(item.comboId);
+      if (view.availability < dto.quantity) {
+        throw new BadRequestException(`Combo chỉ còn ${view.availability} bộ.`);
+      }
+    } else {
+      await this.assertStock(cart.branchId, item.variantId!, dto.quantity);
+    }
     item.quantity = dto.quantity;
     await this.carts.saveItem(item);
     return this.view(customerId);
@@ -114,26 +169,70 @@ export class CartService {
     }
   }
 
+  /** Dòng combo hiển thị trong giỏ (gộp từ view combo — giá/tồn/tiết kiệm). */
+  private comboLine(
+    item: CartItem,
+    view: ComboView,
+    currency: string,
+  ): CartLineDto {
+    const price = Number(view.price);
+    const original = Number(view.originalPrice);
+    return {
+      id: item.id,
+      comboId: item.comboId,
+      slug: view.slug,
+      name: view.name,
+      image: { url: view.imageUrl ?? undefined, alt: view.name },
+      detail: `Gồm ${view.itemCount} sản phẩm`,
+      price,
+      compareAt: original > price ? original : null,
+      currency,
+      quantity: item.quantity,
+      maxStock: view.availability,
+      branchStock: [],
+    };
+  }
+
   /** FE-shaped cart: each line carries the full product/variant snapshot
-   *  (image, price, branch stock) so the storefront renders without a refetch. */
+   *  (image, price, branch stock) so the storefront renders without a refetch.
+   *  Combo lines carry the combo snapshot (giá/tồn) thay cho variant. */
   async serialize(cart: Cart) {
     const items = cart.items ?? [];
     const productIds = [
-      ...new Set(items.map((i) => i.variant?.productId).filter(Boolean)),
+      ...new Set(
+        items
+          .filter((i) => i.variantId)
+          .map((i) => i.variant?.productId)
+          .filter(Boolean),
+      ),
     ] as string[];
     const products = await Promise.all(
       productIds.map((id) => this.products.detailById(id).catch(() => null)),
     );
     const byId = new Map(products.filter((p) => !!p).map((p) => [p!.id, p!]));
 
-    const lines = items
-      .map((i) => {
+    const comboIds = [
+      ...new Set(items.map((i) => i.comboId).filter((x): x is string => !!x)),
+    ];
+    const comboViews = await Promise.all(
+      comboIds.map((id) => this.combos.getView(id).catch(() => null)),
+    );
+    const comboById = new Map(
+      comboViews.filter((v): v is ComboView => !!v).map((v) => [v.id, v]),
+    );
+
+    const lines: CartLineDto[] = [];
+    for (const i of items) {
+      if (i.comboId) {
+        const view = comboById.get(i.comboId);
+        if (view) lines.push(this.comboLine(i, view, cart.currency));
+      } else {
         const product = i.variant?.productId
           ? byId.get(i.variant.productId)
           : undefined;
-        return product ? toCartLine(i, product) : null;
-      })
-      .filter((l): l is CartLineDto => !!l);
+        if (product) lines.push(toCartLine(i, product));
+      }
+    }
 
     const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
     return {

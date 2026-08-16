@@ -2,9 +2,21 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 
 export class AddCartItemDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Biến thể sản phẩm (dùng một trong variantId/comboId)',
+  })
+  @IsOptional()
   @IsUUID()
-  variantId: string;
+  variantId?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Combo (xor variantId) — dòng combo trong giỏ',
+  })
+  @IsOptional()
+  @IsUUID()
+  comboId?: string;
 
   @ApiProperty({ minimum: 1, default: 1 })
   @IsInt()
